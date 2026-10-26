@@ -13,3 +13,8 @@ class NotFoundError(AppError):
 class ConflictError(AppError):
     def __init__(self, message: str = "Resource already exists") -> None:
         super().__init__(message, status_code=409)
+
+
+class UnauthorizedError(AppError):
+    def __init__(self, message: str = "Could not validate credentials") -> None:
+        super().__init__(message, status_code=401)
