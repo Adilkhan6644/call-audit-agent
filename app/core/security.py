@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -14,9 +15,11 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def _create_token(subject: str, token_type: str, expire_minutes: int) -> str:
+def _create_token(subject: str, token_type: str, expire_minutes: int, jti: str | None = None) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     payload = {"sub": subject, "type": token_type, "exp": expires_at}
+    if jti is not None:
+        payload["jti"] = jti
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
@@ -25,7 +28,9 @@ def create_access_token(subject: str) -> str:
 
 
 def create_refresh_token(subject: str) -> str:
-    return _create_token(subject, "refresh", settings.jwt_refresh_expire_minutes)
+    return _create_token(
+        subject, "refresh", settings.jwt_refresh_expire_minutes, jti=str(uuid.uuid4())
+    )
 
 
 def decode_access_token(token: str) -> dict:
@@ -37,6 +42,6 @@ def decode_access_token(token: str) -> dict:
 
 def decode_refresh_token(token: str) -> dict:
     payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-    if payload.get("type") != "refresh":
+    if payload.get("type") != "refresh" or "jti" not in payload:
         raise jwt.InvalidTokenError("Not a refresh token")
     return payload
