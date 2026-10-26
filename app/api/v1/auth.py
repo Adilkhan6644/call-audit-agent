@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.core.exceptions import ConflictError, UnauthorizedError
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
@@ -34,3 +34,8 @@ def login(
         raise UnauthorizedError("Incorrect email or password")
 
     return Token(access_token=create_access_token(subject=str(user.id)))
+
+
+@router.get("/me", response_model=UserRead)
+def get_me(current_user: User = Depends(get_current_user)) -> User:
+    return current_user
