@@ -31,11 +31,12 @@ def test_login_success_returns_valid_token():
     )
 
     assert response.status_code == 200
-    token = response.json()["access_token"]
+    body = response.json()
+    assert "refresh_token" in body
     db = SessionLocal()
     user = db.query(User).filter_by(email="test-login-ok@example.com").one()
     db.close()
-    assert decode_access_token(token)["sub"] == str(user.id)
+    assert decode_access_token(body["access_token"])["sub"] == str(user.id)
 
 
 def test_login_wrong_password_returns_401():
