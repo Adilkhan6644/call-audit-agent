@@ -12,6 +12,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.models.revoked_token import RevokedToken
 from app.models.user import User
 from app.schemas.token import AccessToken, RefreshRequest, Token
 from app.schemas.user import UserCreate, UserRead
@@ -53,11 +54,26 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessTok
     except jwt.PyJWTError:
         raise UnauthorizedError("Invalid or expired refresh token")
 
+    if db.get(RevokedToken, token_payload["jti"]) is not None:
+        raise UnauthorizedError("Invalid or expired refresh token")
+
     user = db.get(User, int(token_payload["sub"]))
     if user is None:
         raise UnauthorizedError("Invalid or expired refresh token")
 
     return AccessToken(access_token=create_access_token(subject=str(user.id)))
+
+
+@router.post("/logout", status_code=204)
+def logout(payload: RefreshRequest, db: Session = Depends(get_db)) -> None:
+    try:
+        token_payload = decode_refresh_token(payload.refresh_token)
+    except jwt.PyJWTError:
+        return
+
+    if db.get(RevokedToken, token_payload["jti"]) is None:
+        db.add(RevokedToken(jti=token_payload["jti"]))
+        db.commit()
 
 
 @router.get("/me", response_model=UserRead)
