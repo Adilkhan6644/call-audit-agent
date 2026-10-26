@@ -8,3 +8,8 @@ class AppError(Exception):
 class NotFoundError(AppError):
     def __init__(self, message: str = "Resource not found") -> None:
         super().__init__(message, status_code=404)
+
+
+class ConflictError(AppError):
+    def __init__(self, message: str = "Resource already exists") -> None:
+        super().__init__(message, status_code=409)
