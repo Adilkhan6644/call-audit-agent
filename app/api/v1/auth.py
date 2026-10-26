@@ -1,12 +1,19 @@
+import jwt
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.exceptions import ConflictError, UnauthorizedError
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    hash_password,
+    verify_password,
+)
 from app.models.user import User
-from app.schemas.token import Token
+from app.schemas.token import AccessToken, RefreshRequest, Token
 from app.schemas.user import UserCreate, UserRead
 
 router = APIRouter(prefix="/auth")
@@ -33,7 +40,24 @@ def login(
     if user is None or not verify_password(form_data.password, user.hashed_password):
         raise UnauthorizedError("Incorrect email or password")
 
-    return Token(access_token=create_access_token(subject=str(user.id)))
+    return Token(
+        access_token=create_access_token(subject=str(user.id)),
+        refresh_token=create_refresh_token(subject=str(user.id)),
+    )
+
+
+@router.post("/refresh", response_model=AccessToken)
+def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessToken:
+    try:
+        token_payload = decode_refresh_token(payload.refresh_token)
+    except jwt.PyJWTError:
+        raise UnauthorizedError("Invalid or expired refresh token")
+
+    user = db.get(User, int(token_payload["sub"]))
+    if user is None:
+        raise UnauthorizedError("Invalid or expired refresh token")
+
+    return AccessToken(access_token=create_access_token(subject=str(user.id)))
 
 
 @router.get("/me", response_model=UserRead)
