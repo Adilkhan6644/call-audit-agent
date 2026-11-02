@@ -18,3 +18,8 @@ class ConflictError(AppError):
 class UnauthorizedError(AppError):
     def __init__(self, message: str = "Could not validate credentials") -> None:
         super().__init__(message, status_code=401)
+
+
+class ForbiddenError(AppError):
+    def __init__(self, message: str = "Not allowed") -> None:
+        super().__init__(message, status_code=403)
