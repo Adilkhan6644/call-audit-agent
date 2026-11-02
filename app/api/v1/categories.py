@@ -3,11 +3,26 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.exceptions import NotFoundError
 from app.models.category import Category
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryRead
 
 router = APIRouter(prefix="/categories")
+
+
+def _get_visible_category(db: Session, category_id: int, current_user: User) -> Category:
+    category = (
+        db.query(Category)
+        .filter(
+            Category.id == category_id,
+            or_(Category.owner_id.is_(None), Category.owner_id == current_user.id),
+        )
+        .first()
+    )
+    if category is None:
+        raise NotFoundError("Category not found")
+    return category
 
 
 @router.get("", response_model=list[CategoryRead])
@@ -34,3 +49,12 @@ def create_category(
     db.commit()
     db.refresh(category)
     return category
+
+
+@router.get("/{category_id}", response_model=CategoryRead)
+def get_category(
+    category_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Category:
+    return _get_visible_category(db, category_id, current_user)
