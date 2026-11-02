@@ -3,10 +3,10 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.category import Category
 from app.models.user import User
-from app.schemas.category import CategoryCreate, CategoryRead
+from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 
 router = APIRouter(prefix="/categories")
 
@@ -58,3 +58,34 @@ def get_category(
     db: Session = Depends(get_db),
 ) -> Category:
     return _get_visible_category(db, category_id, current_user)
+
+
+@router.patch("/{category_id}", response_model=CategoryRead)
+def update_category(
+    category_id: int,
+    payload: CategoryUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Category:
+    category = _get_visible_category(db, category_id, current_user)
+    if category.is_builtin:
+        raise ForbiddenError("Built-in categories cannot be modified")
+
+    category.name = payload.name
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+@router.delete("/{category_id}", status_code=204)
+def delete_category(
+    category_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    category = _get_visible_category(db, category_id, current_user)
+    if category.is_builtin:
+        raise ForbiddenError("Built-in categories cannot be deleted")
+
+    db.delete(category)
+    db.commit()
