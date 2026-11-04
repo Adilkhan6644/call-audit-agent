@@ -8,7 +8,7 @@ from app.models.category import Category
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 
-router = APIRouter(prefix="/categories")
+router = APIRouter(prefix="/categories", tags=["Categories"])
 
 
 def _get_visible_category(db: Session, category_id: int, current_user: User) -> Category:
@@ -25,7 +25,11 @@ def _get_visible_category(db: Session, category_id: int, current_user: User) -> 
     return category
 
 
-@router.get("", response_model=list[CategoryRead])
+@router.get(
+    "",
+    response_model=list[CategoryRead],
+    summary="List built-in categories and your own custom categories",
+)
 def list_categories(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[Category]:
@@ -36,7 +40,12 @@ def list_categories(
     )
 
 
-@router.post("", response_model=CategoryRead, status_code=201)
+@router.post(
+    "",
+    response_model=CategoryRead,
+    status_code=201,
+    summary="Create a custom category",
+)
 def create_category(
     payload: CategoryCreate,
     current_user: User = Depends(get_current_user),
@@ -51,7 +60,11 @@ def create_category(
     return category
 
 
-@router.get("/{category_id}", response_model=CategoryRead)
+@router.get(
+    "/{category_id}",
+    response_model=CategoryRead,
+    summary="Get a single category by id",
+)
 def get_category(
     category_id: int,
     current_user: User = Depends(get_current_user),
@@ -60,7 +73,11 @@ def get_category(
     return _get_visible_category(db, category_id, current_user)
 
 
-@router.patch("/{category_id}", response_model=CategoryRead)
+@router.patch(
+    "/{category_id}",
+    response_model=CategoryRead,
+    summary="Rename a custom category you own",
+)
 def update_category(
     category_id: int,
     payload: CategoryUpdate,
@@ -77,7 +94,11 @@ def update_category(
     return category
 
 
-@router.delete("/{category_id}", status_code=204)
+@router.delete(
+    "/{category_id}",
+    status_code=204,
+    summary="Delete a custom category you own",
+)
 def delete_category(
     category_id: int,
     current_user: User = Depends(get_current_user),
