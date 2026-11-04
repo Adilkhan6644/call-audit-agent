@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.core.exceptions import AppError
 
-router = APIRouter()
+router = APIRouter(tags=["Health"])
 
 
-@router.get("/readiness")
+@router.get("/readiness", summary="Check if the database connection is working")
 def readiness_check(db: Session = Depends(get_db)) -> dict:
     try:
         db.execute(text("SELECT 1"))

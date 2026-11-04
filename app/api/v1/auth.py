@@ -17,10 +17,15 @@ from app.models.user import User
 from app.schemas.token import AccessToken, RefreshRequest, Token
 from app.schemas.user import UserCreate, UserRead
 
-router = APIRouter(prefix="/auth")
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserRead, status_code=201)
+@router.post(
+    "/register",
+    response_model=UserRead,
+    status_code=201,
+    summary="Create a new account",
+)
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
     existing = db.query(User).filter_by(email=payload.email).first()
     if existing is not None:
@@ -33,7 +38,11 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
     return user
 
 
-@router.post("/login", response_model=Token)
+@router.post(
+    "/login",
+    response_model=Token,
+    summary="Log in and get an access + refresh token",
+)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ) -> Token:
@@ -47,7 +56,11 @@ def login(
     )
 
 
-@router.post("/refresh", response_model=AccessToken)
+@router.post(
+    "/refresh",
+    response_model=AccessToken,
+    summary="Exchange a refresh token for a new access token",
+)
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessToken:
     try:
         token_payload = decode_refresh_token(payload.refresh_token)
@@ -64,7 +77,11 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessTok
     return AccessToken(access_token=create_access_token(subject=str(user.id)))
 
 
-@router.post("/logout", status_code=204)
+@router.post(
+    "/logout",
+    status_code=204,
+    summary="Revoke a refresh token (log out)",
+)
 def logout(payload: RefreshRequest, db: Session = Depends(get_db)) -> None:
     try:
         token_payload = decode_refresh_token(payload.refresh_token)
@@ -76,6 +93,10 @@ def logout(payload: RefreshRequest, db: Session = Depends(get_db)) -> None:
         db.commit()
 
 
-@router.get("/me", response_model=UserRead)
+@router.get(
+    "/me",
+    response_model=UserRead,
+    summary="Get the currently logged-in user",
+)
 def get_me(current_user: User = Depends(get_current_user)) -> User:
     return current_user

@@ -9,10 +9,15 @@ from app.models.user import User
 from app.schemas.audit_instruction import AuditInstructionCreate, AuditInstructionRead
 from app.services.audit_instructions import create_new_version
 
-router = APIRouter(prefix="/audit-instructions")
+router = APIRouter(prefix="/audit-instructions", tags=["Audit Instructions"])
 
 
-@router.post("", response_model=AuditInstructionRead, status_code=201)
+@router.post(
+    "",
+    response_model=AuditInstructionRead,
+    status_code=201,
+    summary="Add a new instruction version for a category",
+)
 def create_instruction(
     payload: AuditInstructionCreate,
     current_user: User = Depends(get_current_user),
@@ -22,7 +27,11 @@ def create_instruction(
     return create_new_version(db, payload.category_id, current_user.id, payload.content)
 
 
-@router.get("", response_model=list[AuditInstructionRead])
+@router.get(
+    "",
+    response_model=list[AuditInstructionRead],
+    summary="List all instruction versions for a category",
+)
 def list_instructions(
     category_id: int,
     current_user: User = Depends(get_current_user),
@@ -37,7 +46,11 @@ def list_instructions(
     )
 
 
-@router.get("/active", response_model=AuditInstructionRead)
+@router.get(
+    "/active",
+    response_model=AuditInstructionRead,
+    summary="Get the currently active instruction version for a category",
+)
 def get_active_instruction(
     category_id: int,
     current_user: User = Depends(get_current_user),
