@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_env: str = "development"
-    app_name: str = "ai-call-audit-platform"
+    app_name: str = "AuditIQ"
     database_url: str
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
