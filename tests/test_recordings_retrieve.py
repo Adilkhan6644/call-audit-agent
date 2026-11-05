@@ -105,6 +105,22 @@ def test_download_own_recording_returns_bytes(stubbed_storage):
     assert response.content == body
 
 
+def test_download_missing_storage_object_returns_404_not_502(stubbed_storage, monkeypatch):
+    from app.core.exceptions import NotFoundError
+
+    headers = _auth_headers("test-recget-i@example.com")
+    uploaded = _upload(headers)
+
+    def missing(key):
+        raise NotFoundError("Recording file no longer exists in storage")
+
+    monkeypatch.setattr(storage, "download", missing)
+
+    response = client.get(f"/api/v1/recordings/{uploaded['id']}/download", headers=headers)
+
+    assert response.status_code == 404
+
+
 def test_download_other_users_recording_returns_404(stubbed_storage):
     headers_a = _auth_headers("test-recget-g@example.com")
     headers_b = _auth_headers("test-recget-h@example.com")

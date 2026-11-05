@@ -3,7 +3,7 @@ import io
 import pytest
 
 from app.core import storage
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, NotFoundError
 
 MP3_HEADER = b"ID3" + b"\x00" * 13
 WAV_HEADER = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 4
@@ -63,3 +63,25 @@ def test_upload_failure_raises_app_error(monkeypatch):
 
     with pytest.raises(AppError):
         storage.save("call.mp3", io.BytesIO(MP3_HEADER))
+
+
+def test_download_missing_object_raises_not_found(monkeypatch):
+    class _FakeResponse:
+        status_code = 400
+        text = '{"statusCode":"404","error":"not_found","message":"Object not found"}'
+
+    monkeypatch.setattr(storage.httpx, "get", lambda *a, **k: _FakeResponse())
+
+    with pytest.raises(NotFoundError):
+        storage.download("missing-key.mp3")
+
+
+def test_download_other_failure_raises_app_error(monkeypatch):
+    class _FakeResponse:
+        status_code = 401
+        text = '{"message":"invalid key"}'
+
+    monkeypatch.setattr(storage.httpx, "get", lambda *a, **k: _FakeResponse())
+
+    with pytest.raises(AppError):
+        storage.download("some-key.mp3")
