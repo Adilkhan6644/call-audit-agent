@@ -53,6 +53,20 @@ def delete_many(keys: list[str]) -> None:
         raise AppError("Failed to delete old recordings", status_code=502)
 
 
+def download(key: str) -> bytes:
+    response = httpx.get(
+        f"{settings.supabase_url}/storage/v1/object/{settings.supabase_bucket_name}/{key}",
+        headers={
+            "Authorization": f"Bearer {settings.supabase_service_key}",
+            "apikey": settings.supabase_service_key,
+        },
+        timeout=30,
+    )
+    if response.status_code >= 400:
+        raise AppError("Failed to retrieve recording", status_code=502)
+    return response.content
+
+
 def save(filename: str, stream: BinaryIO) -> tuple[str, int]:
     """Validate and upload an audio file to Supabase Storage. Returns (storage_key, size_bytes)."""
     extension = Path(filename or "").suffix.lower()
