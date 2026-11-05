@@ -11,14 +11,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
     jwt_refresh_expire_minutes: int = 60 * 24 * 7
-    r2_account_id: str = "unconfigured"
-    r2_access_key_id: str = ""
-    r2_secret_access_key: str = ""
-    r2_bucket_name: str = "audit-recordings"
-
-    @property
-    def r2_endpoint_url(self) -> str:
-        return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+    supabase_url: str = "https://your-project.supabase.co"
+    supabase_service_key: str = ""
+    supabase_bucket_name: str = "recordings"
 
 
 settings = Settings()
