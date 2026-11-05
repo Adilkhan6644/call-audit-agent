@@ -4,8 +4,7 @@ import uuid
 from pathlib import Path
 from typing import BinaryIO
 
-import boto3
-from botocore.config import Config
+import httpx
 
 from app.core.config import settings
 from app.core.exceptions import AppError
@@ -22,19 +21,23 @@ _MAGIC_CHECKS = {
 }
 
 
-def _client():
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.r2_endpoint_url,
-        aws_access_key_id=settings.r2_access_key_id,
-        aws_secret_access_key=settings.r2_secret_access_key,
-        region_name="auto",
-        config=Config(signature_version="s3v4"),
+def _upload(key: str, content_type: str, body: bytes) -> None:
+    response = httpx.post(
+        f"{settings.supabase_url}/storage/v1/object/{settings.supabase_bucket_name}/{key}",
+        headers={
+            "Authorization": f"Bearer {settings.supabase_service_key}",
+            "apikey": settings.supabase_service_key,
+            "Content-Type": content_type,
+        },
+        content=body,
+        timeout=30,
     )
+    if response.status_code >= 400:
+        raise AppError("Failed to store recording", status_code=502)
 
 
 def save(filename: str, stream: BinaryIO) -> tuple[str, int]:
-    """Validate and upload an audio file to R2. Returns (storage_key, size_bytes)."""
+    """Validate and upload an audio file to Supabase Storage. Returns (storage_key, size_bytes)."""
     extension = Path(filename or "").suffix.lower()
     if extension not in ALLOWED_EXTENSIONS:
         raise AppError(f"Unsupported file type: {extension or 'unknown'}", status_code=422)
@@ -44,8 +47,9 @@ def save(filename: str, stream: BinaryIO) -> tuple[str, int]:
         raise AppError("File content does not match its extension", status_code=422)
 
     # ponytail: buffers the file in memory (capped at MAX_UPLOAD_SIZE_BYTES) before
-    # a single PUT; switch to a streaming multipart upload if memory use becomes a problem.
-    buffer = io.BytesIO(header)
+    # a single upload call; switch to a streaming upload if memory use becomes a problem.
+    buffer = io.BytesIO()
+    buffer.write(header)
     size = len(header)
     while chunk := stream.read(1024 * 1024):
         size += len(chunk)
@@ -55,11 +59,6 @@ def save(filename: str, stream: BinaryIO) -> tuple[str, int]:
 
     key = f"{uuid.uuid4().hex}{extension}"
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    _client().put_object(
-        Bucket=settings.r2_bucket_name,
-        Key=key,
-        Body=buffer.getvalue(),
-        ContentType=content_type,
-    )
+    _upload(key, content_type, buffer.getvalue())
 
     return key, size
