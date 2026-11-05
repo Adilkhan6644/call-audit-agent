@@ -7,7 +7,7 @@ from typing import BinaryIO
 import httpx
 
 from app.core.config import settings
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, NotFoundError
 
 ALLOWED_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg"}
 MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024
@@ -62,6 +62,8 @@ def download(key: str) -> bytes:
         },
         timeout=30,
     )
+    if response.status_code == 400 and "not_found" in response.text:
+        raise NotFoundError("Recording file no longer exists in storage")
     if response.status_code >= 400:
         raise AppError("Failed to retrieve recording", status_code=502)
     return response.content
