@@ -1,30 +1,34 @@
 import io
-import shutil
 
 import pytest
+from botocore.stub import Stubber
 
 from app.core import storage
-from app.core.config import settings
 from app.core.exceptions import AppError
-
-
-@pytest.fixture(autouse=True)
-def _clean_upload_dir():
-    yield
-    shutil.rmtree(settings.upload_dir, ignore_errors=True)
-
 
 MP3_HEADER = b"ID3" + b"\x00" * 13
 WAV_HEADER = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 4
 
 
-def test_save_lands_under_upload_dir():
-    key = storage.save("call.mp3", io.BytesIO(MP3_HEADER + b"rest of audio"))
+@pytest.fixture
+def stubbed_client(monkeypatch):
+    client = storage._client()
+    stubber = Stubber(client)
+    stubber.activate()
+    monkeypatch.setattr(storage, "_client", lambda: client)
+    yield stubber
+    stubber.deactivate()
 
-    path = storage.get_path(key)
-    assert path.is_file()
-    assert path.parent.resolve() == storage.get_path("x").parent.resolve()
-    assert path.read_bytes() == MP3_HEADER + b"rest of audio"
+
+def test_save_uploads_to_r2_and_returns_key_and_size(stubbed_client):
+    stubbed_client.add_response("put_object", {})
+    body = MP3_HEADER + b"rest of audio"
+
+    key, size = storage.save("call.mp3", io.BytesIO(body))
+
+    assert key.endswith(".mp3")
+    assert size == len(body)
+    stubbed_client.assert_no_pending_responses()
 
 
 def test_save_rejects_disallowed_extension():
@@ -37,14 +41,17 @@ def test_save_rejects_content_spoofed_as_audio():
         storage.save("call.mp3", io.BytesIO(b"not actually audio"))
 
 
-def test_save_generates_uuid_key_not_original_filename():
-    key = storage.save("../../etc/passwd.wav", io.BytesIO(WAV_HEADER))
+def test_save_generates_uuid_key_not_original_filename(stubbed_client):
+    stubbed_client.add_response("put_object", {})
+
+    key, _ = storage.save("../../etc/passwd.wav", io.BytesIO(WAV_HEADER))
 
     assert "passwd" not in key
     assert ".." not in key
-    assert storage.get_path(key).is_file()
 
 
-def test_get_path_rejects_path_traversal_key():
+def test_save_rejects_file_exceeding_max_size(monkeypatch):
+    monkeypatch.setattr(storage, "MAX_UPLOAD_SIZE_BYTES", 10)
+
     with pytest.raises(AppError):
-        storage.get_path("../../etc/passwd")
+        storage.save("call.mp3", io.BytesIO(MP3_HEADER + b"way more than ten bytes"))

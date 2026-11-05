@@ -21,8 +21,7 @@ def upload_recording(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Recording:
-    key = storage.save(file.filename, file.file)
-    size_bytes = storage.get_path(key).stat().st_size
+    key, size_bytes = storage.save(file.filename, file.file)
 
     recording = Recording(
         owner_id=current_user.id,

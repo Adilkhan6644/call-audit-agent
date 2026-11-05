@@ -1,6 +1,11 @@
+import io
+import mimetypes
 import uuid
 from pathlib import Path
 from typing import BinaryIO
+
+import boto3
+from botocore.config import Config
 
 from app.core.config import settings
 from app.core.exceptions import AppError
@@ -17,7 +22,19 @@ _MAGIC_CHECKS = {
 }
 
 
-def save(filename: str, stream: BinaryIO) -> str:
+def _client():
+    return boto3.client(
+        "s3",
+        endpoint_url=settings.r2_endpoint_url,
+        aws_access_key_id=settings.r2_access_key_id,
+        aws_secret_access_key=settings.r2_secret_access_key,
+        region_name="auto",
+        config=Config(signature_version="s3v4"),
+    )
+
+
+def save(filename: str, stream: BinaryIO) -> tuple[str, int]:
+    """Validate and upload an audio file to R2. Returns (storage_key, size_bytes)."""
     extension = Path(filename or "").suffix.lower()
     if extension not in ALLOWED_EXTENSIONS:
         raise AppError(f"Unsupported file type: {extension or 'unknown'}", status_code=422)
@@ -26,30 +43,23 @@ def save(filename: str, stream: BinaryIO) -> str:
     if not _MAGIC_CHECKS[extension](header):
         raise AppError("File content does not match its extension", status_code=422)
 
-    key = f"{uuid.uuid4().hex}{extension}"
-    destination = get_path(key)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-
+    # ponytail: buffers the file in memory (capped at MAX_UPLOAD_SIZE_BYTES) before
+    # a single PUT; switch to a streaming multipart upload if memory use becomes a problem.
+    buffer = io.BytesIO(header)
     size = len(header)
-    if size > MAX_UPLOAD_SIZE_BYTES:
-        raise AppError("File exceeds maximum upload size", status_code=422)
+    while chunk := stream.read(1024 * 1024):
+        size += len(chunk)
+        if size > MAX_UPLOAD_SIZE_BYTES:
+            raise AppError("File exceeds maximum upload size", status_code=422)
+        buffer.write(chunk)
 
-    with destination.open("wb") as out:
-        out.write(header)
-        while chunk := stream.read(1024 * 1024):
-            size += len(chunk)
-            if size > MAX_UPLOAD_SIZE_BYTES:
-                out.close()
-                destination.unlink(missing_ok=True)
-                raise AppError("File exceeds maximum upload size", status_code=422)
-            out.write(chunk)
+    key = f"{uuid.uuid4().hex}{extension}"
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    _client().put_object(
+        Bucket=settings.r2_bucket_name,
+        Key=key,
+        Body=buffer.getvalue(),
+        ContentType=content_type,
+    )
 
-    return key
-
-
-def get_path(key: str) -> Path:
-    base = Path(settings.upload_dir).resolve()
-    candidate = (base / key).resolve()
-    if candidate != base and base not in candidate.parents:
-        raise AppError("Invalid storage key", status_code=422)
-    return candidate
+    return key, size
