@@ -6,6 +6,7 @@ from app.core import storage
 from app.models.recording import Recording
 from app.models.user import User
 from app.schemas.recording import RecordingRead
+from app.services.recordings import delete_previous_days_recordings
 
 router = APIRouter(prefix="/recordings", tags=["Recordings"])
 
@@ -33,4 +34,7 @@ def upload_recording(
     db.add(recording)
     db.commit()
     db.refresh(recording)
+
+    delete_previous_days_recordings(db, current_user.id)
+
     return recording

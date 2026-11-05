@@ -36,6 +36,23 @@ def _upload(key: str, content_type: str, body: bytes) -> None:
         raise AppError("Failed to store recording", status_code=502)
 
 
+def delete_many(keys: list[str]) -> None:
+    if not keys:
+        return
+    response = httpx.request(
+        "DELETE",
+        f"{settings.supabase_url}/storage/v1/object/{settings.supabase_bucket_name}",
+        headers={
+            "Authorization": f"Bearer {settings.supabase_service_key}",
+            "apikey": settings.supabase_service_key,
+        },
+        json={"prefixes": keys},
+        timeout=30,
+    )
+    if response.status_code >= 400:
+        raise AppError("Failed to delete old recordings", status_code=502)
+
+
 def save(filename: str, stream: BinaryIO) -> tuple[str, int]:
     """Validate and upload an audio file to Supabase Storage. Returns (storage_key, size_bytes)."""
     extension = Path(filename or "").suffix.lower()
