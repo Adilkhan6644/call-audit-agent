@@ -14,6 +14,7 @@ app = FastAPI(
             "name": "Audit Instructions",
             "description": "Versioned grading instructions attached to a category",
         },
+        {"name": "Recordings", "description": "Audio recording uploads"},
     ],
 )
 register_error_handlers(app)
