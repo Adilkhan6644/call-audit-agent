@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
     jwt_refresh_expire_minutes: int = 60 * 24 * 7
+    upload_dir: str = "./storage/uploads"
 
 
 settings = Settings()
