@@ -9,9 +9,11 @@ venv/
 .ruff_cache/
 *.egg-info/
 dist/
+PLAN.md
 build/
 .coverage
 htmlcov/
 uploads/
+storage/
 .idea/
 .vscode/
