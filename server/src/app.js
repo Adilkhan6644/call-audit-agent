@@ -1,13 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 
 const healthRouter = require('./routes/health');
 const readinessRouter = require('./routes/readiness');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
 app.use(express.json());
 app.use(healthRouter);
 app.use(readinessRouter);
+app.use(authRouter);
 
 // Mirrors ai-service's {"error": {code, message}} shape so the frontend
 // never has to handle two different error formats.
