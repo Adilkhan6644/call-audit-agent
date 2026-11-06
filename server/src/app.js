@@ -1,11 +1,13 @@
 const express = require('express');
 
 const healthRouter = require('./routes/health');
+const readinessRouter = require('./routes/readiness');
 
 const app = express();
 
 app.use(express.json());
 app.use(healthRouter);
+app.use(readinessRouter);
 
 // Mirrors ai-service's {"error": {code, message}} shape so the frontend
 // never has to handle two different error formats.
