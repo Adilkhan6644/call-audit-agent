@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
+const swaggerUi = require('swagger-ui-express');
 
+const swaggerSpec = require('./swagger');
 const healthRouter = require('./routes/health');
 const readinessRouter = require('./routes/readiness');
 const authRouter = require('./routes/auth');
@@ -12,6 +14,7 @@ const recordingsRouter = require('./routes/recordings');
 const app = express();
 
 app.use(express.json());
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(healthRouter);
 app.use(readinessRouter);
 app.use(authRouter);
