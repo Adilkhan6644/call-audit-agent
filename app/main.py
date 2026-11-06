@@ -15,6 +15,7 @@ app = FastAPI(
             "description": "Versioned grading instructions attached to a category",
         },
         {"name": "Recordings", "description": "Audio recording uploads"},
+        {"name": "Internal", "description": "Internal AI endpoints called only by the Node main backend"},
     ],
 )
 register_error_handlers(app)

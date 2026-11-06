@@ -19,5 +19,8 @@ class Settings(BaseSettings):
     whisper_model_size: str = "base"
     deepgram_api_key: str = ""
 
+    internal_api_secret: str = ""
+    llm_provider: str = "mock"
+
 
 settings = Settings()
