@@ -26,7 +26,7 @@ cd ai-service
 python -m venv ../venv          # shared venv lives at repo root
 ../venv/Scripts/activate        # Windows (use `source ../venv/bin/activate` on macOS/Linux)
 pip install -r requirements-dev.txt
-cp .env.example .env            # then fill in DATABASE_URL, SUPABASE_*, INTERNAL_API_SECRET, etc.
+cp .env.example .env            # then fill in INTERNAL_API_SECRET, DEEPGRAM_API_KEY, etc.
 uvicorn app.main:app --reload --port 8001
 ```
 

@@ -1,6 +1,6 @@
-# ai-call-audit-platform 
+# ai-service
 
-AI-powered call-auditing backend. FastAPI + PostgreSQL. Frontend not started yet.
+Stateless FastAPI AI microservice for call-audit-agent. No database, no auth of its own — exposes `/internal/transcribe` (STT) and `/internal/audit` (LLM audit scoring + QA validation) over REST, gated by a shared secret header, called only by `server/` (the Node main backend).
 
 ## Setup
 
