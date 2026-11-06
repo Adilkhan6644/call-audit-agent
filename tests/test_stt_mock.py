@@ -19,3 +19,9 @@ def test_mock_satisfies_provider_interface_contract():
     assert isinstance(result.text, str)
     assert isinstance(result.language, str)
     assert isinstance(result.duration_seconds, float)
+
+
+def test_mock_separates_speakers():
+    result = MockSttProvider().transcribe("call.wav")
+
+    assert [s.speaker for s in result.segments] == ["Speaker 1", "Speaker 2"]

@@ -15,5 +15,9 @@ class Settings(BaseSettings):
     supabase_service_key: str = ""
     supabase_bucket_name: str = "recordings"
 
+    stt_provider: str = "faster_whisper"  # one of: faster_whisper, openai_whisper, deepgram
+    whisper_model_size: str = "base"
+    deepgram_api_key: str = ""
+
 
 settings = Settings()
