@@ -5,6 +5,7 @@ const healthRouter = require('./routes/health');
 const readinessRouter = require('./routes/readiness');
 const authRouter = require('./routes/auth');
 const categoriesRouter = require('./routes/categories');
+const auditInstructionsRouter = require('./routes/auditInstructions');
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(healthRouter);
 app.use(readinessRouter);
 app.use(authRouter);
 app.use(categoriesRouter);
+app.use(auditInstructionsRouter);
 
 // Mirrors ai-service's {"error": {code, message}} shape so the frontend
 // never has to handle two different error formats.
