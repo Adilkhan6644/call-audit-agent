@@ -24,4 +24,10 @@ class NotFoundError extends AppError {
   }
 }
 
-module.exports = { AppError, UnauthorizedError, ConflictError, NotFoundError };
+class ForbiddenError extends AppError {
+  constructor(message = 'Not allowed') {
+    super(message, 403, 'forbidden');
+  }
+}
+
+module.exports = { AppError, UnauthorizedError, ConflictError, NotFoundError, ForbiddenError };
