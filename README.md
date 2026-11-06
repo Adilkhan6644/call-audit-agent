@@ -27,10 +27,10 @@ python -m venv ../venv          # shared venv lives at repo root
 ../venv/Scripts/activate        # Windows (use `source ../venv/bin/activate` on macOS/Linux)
 pip install -r requirements-dev.txt
 cp .env.example .env            # then fill in DATABASE_URL, SUPABASE_*, INTERNAL_API_SECRET, etc.
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8001
 ```
 
-Runs on http://127.0.0.1:8000 — API docs at http://127.0.0.1:8000/docs
+Runs on http://127.0.0.1:8001 — API docs at http://127.0.0.1:8001/docs
 
 ## 3. Start `server` (Node + Express)
 
