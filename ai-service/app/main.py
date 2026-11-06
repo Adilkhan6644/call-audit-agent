@@ -7,14 +7,7 @@ from app.core.error_handlers import register_error_handlers
 app = FastAPI(
     title=settings.app_name,
     openapi_tags=[
-        {"name": "Health", "description": "Service and database status checks"},
-        {"name": "Authentication", "description": "Register, log in, and manage tokens"},
-        {"name": "Categories", "description": "Built-in and custom call categories"},
-        {
-            "name": "Audit Instructions",
-            "description": "Versioned grading instructions attached to a category",
-        },
-        {"name": "Recordings", "description": "Audio recording uploads"},
+        {"name": "Health", "description": "Service status checks"},
         {"name": "Internal", "description": "Internal AI endpoints called only by the Node main backend"},
     ],
 )

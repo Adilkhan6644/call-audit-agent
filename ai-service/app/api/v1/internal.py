@@ -4,9 +4,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
+from app.core.audio_validation import ALLOWED_EXTENSIONS, MAGIC_CHECKS, MAX_UPLOAD_SIZE_BYTES
 from app.core.exceptions import AppError
 from app.core.internal_auth import require_internal_secret
-from app.core.storage import ALLOWED_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES, _MAGIC_CHECKS
 from app.schemas.audit_result import AuditResultSchema, validate_audit_result
 from app.schemas.internal import AuditRequestIn, TranscriptResultOut, TranscriptSegmentOut
 from app.services.ai_client_wrapper import call_with_retry
@@ -27,7 +27,7 @@ def transcribe(file: UploadFile = File(...)) -> TranscriptResultOut:
         raise AppError(f"Unsupported file type: {extension or 'unknown'}", status_code=422)
 
     header = file.file.read(16)
-    if not _MAGIC_CHECKS[extension](header):
+    if not MAGIC_CHECKS[extension](header):
         raise AppError("File content does not match its extension", status_code=422)
 
     fd, tmp_path = tempfile.mkstemp(suffix=extension)
