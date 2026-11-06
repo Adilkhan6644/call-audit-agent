@@ -69,6 +69,15 @@ def test_transcribe_rejects_bad_extension():
     assert response.status_code == 422
 
 
+def test_transcribe_rejects_content_spoofed_as_audio():
+    response = client.post(
+        "/api/v1/internal/transcribe",
+        files={"file": ("call.mp3", io.BytesIO(b"not actually audio"), "audio/mpeg")},
+        headers=_headers(),
+    )
+    assert response.status_code == 422
+
+
 def test_transcribe_provider_timeout_maps_to_error(monkeypatch):
     monkeypatch.setattr("app.api.v1.internal.get_stt_provider", lambda: _TimeoutSttProvider())
     response = client.post(
