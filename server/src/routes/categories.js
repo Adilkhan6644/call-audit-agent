@@ -1,26 +1,12 @@
 const express = require('express');
-const mongoose = require('mongoose');
 
 const Category = require('../models/category');
 const authenticate = require('../middleware/auth');
-const { ForbiddenError, NotFoundError } = require('../errors');
+const { ForbiddenError } = require('../errors');
+const { getVisibleCategory } = require('../services/categories');
 
 const router = express.Router();
 router.use(authenticate);
-
-async function getVisibleCategory(categoryId, currentUser) {
-  if (!mongoose.isValidObjectId(categoryId)) {
-    throw new NotFoundError('Category not found');
-  }
-  const category = await Category.findOne({
-    _id: categoryId,
-    $or: [{ ownerId: null }, { ownerId: currentUser._id }],
-  });
-  if (!category) {
-    throw new NotFoundError('Category not found');
-  }
-  return category;
-}
 
 router.get('/categories', async (req, res) => {
   const categories = await Category.find({

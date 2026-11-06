@@ -1,4 +1,7 @@
+const mongoose = require('mongoose');
+
 const Category = require('../models/category');
+const { NotFoundError } = require('../errors');
 
 const BUILTIN_CATEGORY_NAMES = [
   'Medical Billing',
@@ -18,4 +21,18 @@ async function ensureBuiltinCategories() {
   );
 }
 
-module.exports = { ensureBuiltinCategories, BUILTIN_CATEGORY_NAMES };
+async function getVisibleCategory(categoryId, currentUser) {
+  if (!mongoose.isValidObjectId(categoryId)) {
+    throw new NotFoundError('Category not found');
+  }
+  const category = await Category.findOne({
+    _id: categoryId,
+    $or: [{ ownerId: null }, { ownerId: currentUser._id }],
+  });
+  if (!category) {
+    throw new NotFoundError('Category not found');
+  }
+  return category;
+}
+
+module.exports = { ensureBuiltinCategories, getVisibleCategory, BUILTIN_CATEGORY_NAMES };
