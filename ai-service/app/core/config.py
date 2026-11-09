@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.0-flash"
     grok_api_key: str = ""
     grok_model: str = "grok-2-latest"
+    # grok-2-latest's context window is 131072 tokens; leave headroom for the
+    # system prompt, instructions, and the model's own output.
+    grok_max_input_tokens: int = 110000
 
 
 settings = Settings()

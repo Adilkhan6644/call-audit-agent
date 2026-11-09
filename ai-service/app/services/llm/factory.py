@@ -20,6 +20,6 @@ def get_llm_provider(name: str | None = None) -> LlmProvider:
     if provider == "gemini":
         return GeminiLlmProvider(settings.gemini_api_key, settings.gemini_model)
     if provider == "grok":
-        return GrokLlmProvider(settings.grok_api_key, settings.grok_model)
+        return GrokLlmProvider(settings.grok_api_key, settings.grok_model, settings.grok_max_input_tokens)
 
     raise AppError(f"Unknown LLM provider: {provider!r}. Must be one of {PROVIDERS}", status_code=500)
