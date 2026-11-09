@@ -95,7 +95,7 @@ def test_groq_provider_parses_response_into_structured_result(monkeypatch):
     payload = {"choices": [{"message": {"content": '{"summary": "Solid", "score": 6, "findings": ["interrupted caller"]}'}}]}
     monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(200, payload))
 
-    result = GroqLlmProvider(api_key="k", model="llama-3.3-70b-versatile", max_input_tokens=110000).audit(
+    result = GroqLlmProvider(api_key="k", model="openai/gpt-oss-120b", max_input_tokens=110000).audit(
         "transcript", "instructions"
     )
 
@@ -108,7 +108,7 @@ def test_groq_provider_raises_app_error_on_failure(monkeypatch):
     monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(500, {}))
 
     with pytest.raises(AppError):
-        GroqLlmProvider(api_key="bad", model="llama-3.3-70b-versatile", max_input_tokens=110000).audit("t", "i")
+        GroqLlmProvider(api_key="bad", model="openai/gpt-oss-120b", max_input_tokens=110000).audit("t", "i")
 
 
 def test_groq_provider_truncates_a_transcript_too_large_for_the_context_window(monkeypatch):
@@ -122,7 +122,7 @@ def test_groq_provider_truncates_a_transcript_too_large_for_the_context_window(m
     monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", fake_post)
 
     huge_transcript = "word " * 200000  # far larger than a 1000-token budget allows
-    GroqLlmProvider(api_key="k", model="llama-3.3-70b-versatile", max_input_tokens=1000).audit(
+    GroqLlmProvider(api_key="k", model="openai/gpt-oss-120b", max_input_tokens=1000).audit(
         huge_transcript, "instructions"
     )
 

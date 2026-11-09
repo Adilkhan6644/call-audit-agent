@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
-    # llama-3.3-70b-versatile's context window on Groq is 128K tokens; leave
-    # headroom for the system prompt, instructions, and the model's own output.
+    groq_model: str = "openai/gpt-oss-120b"
+    # gpt-oss-120b's context window on Groq is 128K tokens; leave headroom for
+    # the system prompt, instructions, and the model's own output.
     groq_max_input_tokens: int = 110000
 
 
