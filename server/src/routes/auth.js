@@ -9,7 +9,22 @@ const authenticate = require('../middleware/auth');
 const router = express.Router();
 
 function toUserRead(user) {
-  return { id: user._id, email: user.email, isActive: user.isActive, createdAt: user.createdAt };
+  return { id: user._id, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt };
+}
+
+function adminEmails() {
+  return (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Promote-only: removing an email from ADMIN_EMAILS later never demotes an already-promoted user. */
+async function syncAdminRole(user) {
+  if (user.role !== 'admin' && adminEmails().includes(user.email.toLowerCase())) {
+    user.role = 'admin';
+    await user.save();
+  }
 }
 
 /**
@@ -42,6 +57,7 @@ router.post('/auth/register', async (req, res) => {
 
   const hashedPassword = await hashPassword(password);
   const user = await User.create({ email, hashedPassword });
+  await syncAdminRole(user);
   res.status(201).json(toUserRead(user));
 });
 
@@ -74,6 +90,7 @@ router.post('/auth/login', async (req, res) => {
     throw new UnauthorizedError('Incorrect email or password');
   }
 
+  await syncAdminRole(user);
   const accessToken = createAccessToken(user._id);
   res.json({ access_token: accessToken, token_type: 'bearer' });
 });
