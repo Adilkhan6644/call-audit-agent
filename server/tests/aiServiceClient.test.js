@@ -63,6 +63,29 @@ describe('aiServiceClient.audit', () => {
     await expect(audit('t', 'i')).rejects.toMatchObject({ statusCode: 502 });
   });
 
+  it('surfaces a 429 with code provider_quota_exceeded distinctly from a generic failure', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: { code: 'provider_quota_exceeded', message: 'Groq audit request failed: quota exhausted' } }),
+    }));
+
+    await expect(audit('t', 'i')).rejects.toMatchObject({
+      statusCode: 429,
+      code: 'provider_quota_exceeded',
+    });
+  });
+
+  it('treats a plain 429 (no provider_quota_exceeded code) as the generic failure', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: { code: 'some_other_code', message: 'rate limited' } }),
+    }));
+
+    await expect(audit('t', 'i')).rejects.toMatchObject({ statusCode: 502, code: 'ai_service_error' });
+  });
+
   it('includes api_key_override when an admin-rotated key exists for the active provider', async () => {
     process.env.LLM_PROVIDER = 'groq';
     const adminId = new mongoose.Types.ObjectId();
