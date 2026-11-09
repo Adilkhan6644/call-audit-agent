@@ -67,6 +67,12 @@ describe('GET /admin/api-keys', () => {
 });
 
 describe('PUT /admin/api-keys/:provider', () => {
+  it('rejects a non-admin with 403', async () => {
+    const headers = await registerAndLogin('rotate-plain@example.com');
+    const response = await request(app).put('/admin/api-keys/openai').set(headers).send({ value: 'sk-x' });
+    expect(response.status).toBe(403);
+  });
+
   it('rejects an unknown provider with 422', async () => {
     const headers = await registerAdmin('rotate-badprovider@example.com');
     const response = await request(app).put('/admin/api-keys/claude').set(headers).send({ value: 'sk-x' });
