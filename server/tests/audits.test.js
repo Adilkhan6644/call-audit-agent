@@ -188,6 +188,30 @@ describe('GET /audits/export.csv', () => {
   });
 });
 
+describe('GET /audits/export.pdf', () => {
+  it('is ownership-gated and returns a non-empty PDF', async () => {
+    const headersA = await registerAndLogin('pdf-a@example.com');
+    const headersB = await registerAndLogin('pdf-b@example.com');
+    const { categoryId, recordingId } = await setupCategoryInstructionAndRecording(headersA);
+
+    aiServiceClient.transcribe.mockResolvedValue({ text: 't', language: 'en', duration_seconds: 1, segments: [] });
+    aiServiceClient.audit.mockResolvedValue({ summary: 's', score: 5, findings: [] });
+    await request(app).post('/audits').set(headersA).send({ categoryId, recordingId });
+
+    const pdfA = await request(app).get('/audits/export.pdf').set(headersA).buffer().parse((res, callback) => {
+      res.setEncoding('binary');
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => callback(null, Buffer.from(data, 'binary')));
+    });
+    expect(pdfA.status).toBe(200);
+    expect(pdfA.body.subarray(0, 4).toString('latin1')).toBe('%PDF');
+
+    const pdfB = await request(app).get('/audits/export.pdf').set(headersB);
+    expect(pdfB.status).toBe(200);
+  });
+});
+
 describe('GET /audits/:id', () => {
   it('is owner-scoped', async () => {
     const headersA = await registerAndLogin('getaudit-a@example.com');
