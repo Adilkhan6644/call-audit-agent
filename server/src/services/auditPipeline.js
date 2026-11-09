@@ -30,7 +30,9 @@ async function runAuditPipeline(job, recording) {
     job.completedAt = new Date();
     await job.save();
     await recordUsage(job.ownerId, job._id);
-  } catch {
+  } catch (err) {
+    // err.code === 'provider_quota_exceeded' is a hook point for the admin
+    // alert wired up separately — the job itself always fails the same way.
     job.status = 'failed';
     job.result = null;
     job.errorMessage = 'Audit processing failed';

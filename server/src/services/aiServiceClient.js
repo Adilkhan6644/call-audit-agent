@@ -28,6 +28,12 @@ async function callInternal(path, { body, headers = {} } = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 429) {
+      const body = await response.json().catch(() => ({}));
+      if (body?.error?.code === 'provider_quota_exceeded') {
+        throw new AppError(body.error.message || 'AI provider quota exceeded', 429, 'provider_quota_exceeded');
+      }
+    }
     throw new AppError('AI service returned an error', 502, 'ai_service_error');
   }
   return response.json();

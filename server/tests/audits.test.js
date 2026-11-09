@@ -97,6 +97,24 @@ describe('POST /audits', () => {
     expect(response.body.errorMessage).toBe('Audit processing failed');
   });
 
+  it('still fails the job with the same sanitized message on a quota-exceeded AI-service failure', async () => {
+    const { AppError } = require('../src/errors');
+    const headers = await registerAndLogin('audit-quota@example.com');
+    const { categoryId, recordingId } = await setupCategoryInstructionAndRecording(headers);
+
+    aiServiceClient.transcribe.mockResolvedValue({ text: 't', language: 'en', duration_seconds: 1, segments: [] });
+    aiServiceClient.audit.mockRejectedValue(
+      new AppError('Groq audit request failed: quota exhausted', 429, 'provider_quota_exceeded')
+    );
+
+    const response = await request(app).post('/audits').set(headers).send({ categoryId, recordingId });
+
+    expect(response.status).toBe(201);
+    expect(response.body.status).toBe('failed');
+    expect(response.body.result).toBeNull();
+    expect(response.body.errorMessage).toBe('Audit processing failed');
+  });
+
   it('blocks a second concurrent run for the same recording with 409, but allows a re-run after completion', async () => {
     const headers = await registerAndLogin('audit-dup@example.com');
     const { categoryId, recordingId } = await setupCategoryInstructionAndRecording(headers);
