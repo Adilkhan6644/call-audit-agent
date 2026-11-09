@@ -93,6 +93,13 @@ class _FakeLlmProvider:
         return StructuredAuditResult(summary="ok", score=0.9, findings=["good call"])
 
 
+class _QuotaExceededLlmProvider:
+    def audit(self, transcript, instructions):
+        from app.core.provider_exceptions import ProviderQuotaExceededError
+
+        raise ProviderQuotaExceededError("Groq audit request failed: quota exhausted")
+
+
 def test_audit_requires_internal_secret():
     response = client.post("/api/v1/internal/audit", json={"transcript": "hi", "instructions": "be nice"})
     assert response.status_code == 401
@@ -107,3 +114,14 @@ def test_audit_returns_schema_valid_result(monkeypatch):
     )
     assert response.status_code == 200
     assert response.json() == {"summary": "ok", "score": 0.9, "findings": ["good call"]}
+
+
+def test_audit_returns_429_with_quota_exceeded_code_when_provider_is_out_of_credits(monkeypatch):
+    monkeypatch.setattr("app.api.v1.internal.get_llm_provider", lambda **kwargs: _QuotaExceededLlmProvider())
+    response = client.post(
+        "/api/v1/internal/audit",
+        json={"transcript": "hi", "instructions": "be nice"},
+        headers=_headers(),
+    )
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "provider_quota_exceeded"

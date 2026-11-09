@@ -1,7 +1,7 @@
 import httpx
 
-from app.core.exceptions import AppError
 from app.services.llm.base import StructuredAuditResult
+from app.services.llm.errors import classify_provider_failure
 from app.services.llm.prompt import SYSTEM_PROMPT, build_user_prompt, parse_audit_json
 
 
@@ -24,7 +24,7 @@ class GeminiLlmProvider:
             timeout=60,
         )
         if response.status_code >= 400:
-            raise AppError("Gemini audit request failed", status_code=502)
+            raise classify_provider_failure("Gemini", response)
 
         content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         data = parse_audit_json(content)

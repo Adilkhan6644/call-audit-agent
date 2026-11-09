@@ -1,6 +1,9 @@
+import json
+
 import pytest
 
 from app.core.exceptions import AppError
+from app.core.provider_exceptions import ProviderQuotaExceededError
 from app.services.llm.factory import get_llm_provider
 from app.services.llm.gemini_provider import GeminiLlmProvider
 from app.services.llm.groq_provider import GroqLlmProvider
@@ -60,6 +63,7 @@ class _FakeResponse:
     def __init__(self, status_code, payload):
         self.status_code = status_code
         self._payload = payload
+        self.text = json.dumps(payload) if not isinstance(payload, str) else payload
 
     def json(self):
         return self._payload
@@ -83,6 +87,14 @@ def test_openai_provider_raises_app_error_on_failure(monkeypatch):
         OpenAiLlmProvider(api_key="bad", model="gpt-4o-mini").audit("t", "i")
 
 
+def test_openai_provider_raises_quota_exceeded_on_insufficient_quota(monkeypatch):
+    payload = {"error": {"code": "insufficient_quota", "message": "You exceeded your current quota"}}
+    monkeypatch.setattr("app.services.llm.openai_provider.httpx.post", lambda *a, **k: _FakeResponse(429, payload))
+
+    with pytest.raises(ProviderQuotaExceededError):
+        OpenAiLlmProvider(api_key="bad", model="gpt-4o-mini").audit("t", "i")
+
+
 def test_gemini_provider_parses_response_into_structured_result(monkeypatch):
     payload = {"candidates": [{"content": {"parts": [{"text": '{"summary": "Fine", "score": 7, "findings": ["late reply"]}'}]}}]}
     monkeypatch.setattr("app.services.llm.gemini_provider.httpx.post", lambda *a, **k: _FakeResponse(200, payload))
@@ -98,6 +110,21 @@ def test_gemini_provider_raises_app_error_on_failure(monkeypatch):
     monkeypatch.setattr("app.services.llm.gemini_provider.httpx.post", lambda *a, **k: _FakeResponse(403, {}))
 
     with pytest.raises(AppError):
+        GeminiLlmProvider(api_key="bad", model="gemini-2.0-flash").audit("t", "i")
+
+
+def test_gemini_provider_raises_quota_exceeded_on_resource_exhausted(monkeypatch):
+    payload = {"error": {"status": "RESOURCE_EXHAUSTED", "message": "Quota exceeded"}}
+    monkeypatch.setattr("app.services.llm.gemini_provider.httpx.post", lambda *a, **k: _FakeResponse(429, payload))
+
+    with pytest.raises(ProviderQuotaExceededError):
+        GeminiLlmProvider(api_key="bad", model="gemini-2.0-flash").audit("t", "i")
+
+
+def test_gemini_provider_raises_quota_exceeded_on_402(monkeypatch):
+    monkeypatch.setattr("app.services.llm.gemini_provider.httpx.post", lambda *a, **k: _FakeResponse(402, {}))
+
+    with pytest.raises(ProviderQuotaExceededError):
         GeminiLlmProvider(api_key="bad", model="gemini-2.0-flash").audit("t", "i")
 
 
@@ -118,6 +145,23 @@ def test_groq_provider_raises_app_error_on_failure(monkeypatch):
     monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(500, {}))
 
     with pytest.raises(AppError):
+        GroqLlmProvider(api_key="bad", model="openai/gpt-oss-120b", max_input_tokens=110000).audit("t", "i")
+
+
+def test_groq_provider_raises_app_error_not_quota_on_a_plain_rate_limit(monkeypatch):
+    payload = {"error": {"code": "rate_limit_exceeded", "message": "Too many requests"}}
+    monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(429, payload))
+
+    with pytest.raises(AppError) as excinfo:
+        GroqLlmProvider(api_key="bad", model="openai/gpt-oss-120b", max_input_tokens=110000).audit("t", "i")
+    assert not isinstance(excinfo.value, ProviderQuotaExceededError)
+
+
+def test_groq_provider_raises_quota_exceeded_on_insufficient_quota(monkeypatch):
+    payload = {"error": {"code": "insufficient_quota", "message": "You exceeded your current quota"}}
+    monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(429, payload))
+
+    with pytest.raises(ProviderQuotaExceededError):
         GroqLlmProvider(api_key="bad", model="openai/gpt-oss-120b", max_input_tokens=110000).audit("t", "i")
 
 
