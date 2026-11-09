@@ -12,16 +12,16 @@ class Settings(BaseSettings):
     deepgram_api_key: str = ""
 
     internal_api_secret: str = ""
-    llm_provider: str = "mock"  # one of: mock, openai, gemini, grok
+    llm_provider: str = "mock"  # one of: mock, openai, gemini, groq
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
-    grok_api_key: str = ""
-    grok_model: str = "grok-2-latest"
-    # grok-2-latest's context window is 131072 tokens; leave headroom for the
-    # system prompt, instructions, and the model's own output.
-    grok_max_input_tokens: int = 110000
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+    # llama-3.3-70b-versatile's context window on Groq is 128K tokens; leave
+    # headroom for the system prompt, instructions, and the model's own output.
+    groq_max_input_tokens: int = 110000
 
 
 settings = Settings()
