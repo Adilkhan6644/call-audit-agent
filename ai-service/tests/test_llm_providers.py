@@ -3,7 +3,7 @@ import pytest
 from app.core.exceptions import AppError
 from app.services.llm.factory import get_llm_provider
 from app.services.llm.gemini_provider import GeminiLlmProvider
-from app.services.llm.grok_provider import GrokLlmProvider
+from app.services.llm.groq_provider import GroqLlmProvider
 from app.services.llm.mock import MockLlmProvider
 from app.services.llm.openai_provider import OpenAiLlmProvider
 from app.services.llm.prompt import parse_audit_json, truncate_transcript
@@ -13,7 +13,7 @@ def test_factory_returns_requested_provider_explicitly():
     assert isinstance(get_llm_provider("mock"), MockLlmProvider)
     assert isinstance(get_llm_provider("openai"), OpenAiLlmProvider)
     assert isinstance(get_llm_provider("gemini"), GeminiLlmProvider)
-    assert isinstance(get_llm_provider("grok"), GrokLlmProvider)
+    assert isinstance(get_llm_provider("groq"), GroqLlmProvider)
 
 
 def test_factory_rejects_unknown_provider():
@@ -91,11 +91,11 @@ def test_gemini_provider_raises_app_error_on_failure(monkeypatch):
         GeminiLlmProvider(api_key="bad", model="gemini-2.0-flash").audit("t", "i")
 
 
-def test_grok_provider_parses_response_into_structured_result(monkeypatch):
+def test_groq_provider_parses_response_into_structured_result(monkeypatch):
     payload = {"choices": [{"message": {"content": '{"summary": "Solid", "score": 6, "findings": ["interrupted caller"]}'}}]}
-    monkeypatch.setattr("app.services.llm.grok_provider.httpx.post", lambda *a, **k: _FakeResponse(200, payload))
+    monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(200, payload))
 
-    result = GrokLlmProvider(api_key="k", model="grok-2-latest", max_input_tokens=110000).audit(
+    result = GroqLlmProvider(api_key="k", model="llama-3.3-70b-versatile", max_input_tokens=110000).audit(
         "transcript", "instructions"
     )
 
@@ -104,14 +104,14 @@ def test_grok_provider_parses_response_into_structured_result(monkeypatch):
     assert result.findings == ["interrupted caller"]
 
 
-def test_grok_provider_raises_app_error_on_failure(monkeypatch):
-    monkeypatch.setattr("app.services.llm.grok_provider.httpx.post", lambda *a, **k: _FakeResponse(500, {}))
+def test_groq_provider_raises_app_error_on_failure(monkeypatch):
+    monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", lambda *a, **k: _FakeResponse(500, {}))
 
     with pytest.raises(AppError):
-        GrokLlmProvider(api_key="bad", model="grok-2-latest", max_input_tokens=110000).audit("t", "i")
+        GroqLlmProvider(api_key="bad", model="llama-3.3-70b-versatile", max_input_tokens=110000).audit("t", "i")
 
 
-def test_grok_provider_truncates_a_transcript_too_large_for_the_context_window(monkeypatch):
+def test_groq_provider_truncates_a_transcript_too_large_for_the_context_window(monkeypatch):
     payload = {"choices": [{"message": {"content": '{"summary": "ok", "score": 5, "findings": []}'}}]}
     captured = {}
 
@@ -119,10 +119,12 @@ def test_grok_provider_truncates_a_transcript_too_large_for_the_context_window(m
         captured["sent_content"] = json["messages"][1]["content"]
         return _FakeResponse(200, payload)
 
-    monkeypatch.setattr("app.services.llm.grok_provider.httpx.post", fake_post)
+    monkeypatch.setattr("app.services.llm.groq_provider.httpx.post", fake_post)
 
     huge_transcript = "word " * 200000  # far larger than a 1000-token budget allows
-    GrokLlmProvider(api_key="k", model="grok-2-latest", max_input_tokens=1000).audit(huge_transcript, "instructions")
+    GroqLlmProvider(api_key="k", model="llama-3.3-70b-versatile", max_input_tokens=1000).audit(
+        huge_transcript, "instructions"
+    )
 
     assert len(captured["sent_content"]) < len(huge_transcript)
     assert "omitted from the middle" in captured["sent_content"]
