@@ -65,3 +65,38 @@ describe('GET /admin/api-keys', () => {
     expect(JSON.stringify(response.body)).not.toContain('sk-test-abcdEFGH1234');
   });
 });
+
+describe('PUT /admin/api-keys/:provider', () => {
+  it('rejects an unknown provider with 422', async () => {
+    const headers = await registerAdmin('rotate-badprovider@example.com');
+    const response = await request(app).put('/admin/api-keys/claude').set(headers).send({ value: 'sk-x' });
+    expect(response.status).toBe(422);
+  });
+
+  it('rejects an empty value with 422', async () => {
+    const headers = await registerAdmin('rotate-empty@example.com');
+    const response = await request(app).put('/admin/api-keys/openai').set(headers).send({ value: '' });
+    expect(response.status).toBe(422);
+  });
+
+  it('rotates the key and returns only a masked body, never the full value, and never logs it', async () => {
+    const headers = await registerAdmin('rotate-ok@example.com');
+    const rawValue = 'sk-live-superSecretValue9999';
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await request(app).put('/admin/api-keys/openai').set(headers).send({ value: rawValue });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ provider: 'openai', configured: true, last4: '9999', updatedAt: expect.any(String) });
+    expect(response.text).not.toContain(rawValue);
+
+    const loggedAnywhere = [...logSpy.mock.calls, ...errorSpy.mock.calls].some((args) =>
+      args.some((arg) => String(arg).includes(rawValue))
+    );
+    expect(loggedAnywhere).toBe(false);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+});
