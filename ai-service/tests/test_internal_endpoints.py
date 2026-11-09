@@ -99,7 +99,7 @@ def test_audit_requires_internal_secret():
 
 
 def test_audit_returns_schema_valid_result(monkeypatch):
-    monkeypatch.setattr("app.api.v1.internal.get_llm_provider", lambda: _FakeLlmProvider())
+    monkeypatch.setattr("app.api.v1.internal.get_llm_provider", lambda **kwargs: _FakeLlmProvider())
     response = client.post(
         "/api/v1/internal/audit",
         json={"transcript": "hi", "instructions": "be nice"},

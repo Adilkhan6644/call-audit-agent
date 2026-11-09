@@ -2,9 +2,23 @@ process.env.AI_SERVICE_URL = 'http://ai-service.test/api/v1';
 process.env.INTERNAL_API_SECRET = 'shared-secret';
 
 const { transcribe, audit } = require('../src/services/aiServiceClient');
+const { connectDb, mongoose } = require('../src/db/connection');
+const ApiKeySetting = require('../src/models/apiKeySetting');
 
-afterEach(() => {
+const TEST_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/call_auditing_test';
+
+beforeAll(async () => {
+  await connectDb(TEST_URI);
+});
+
+afterEach(async () => {
   global.fetch = undefined;
+  delete process.env.LLM_PROVIDER;
+  await ApiKeySetting.deleteMany({});
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
 });
 
 describe('aiServiceClient.transcribe', () => {
@@ -47,5 +61,29 @@ describe('aiServiceClient.audit', () => {
     global.fetch = jest.fn(async () => ({ ok: false, status: 500 }));
 
     await expect(audit('t', 'i')).rejects.toMatchObject({ statusCode: 502 });
+  });
+
+  it('includes api_key_override when an admin-rotated key exists for the active provider', async () => {
+    process.env.LLM_PROVIDER = 'groq';
+    const adminId = new mongoose.Types.ObjectId();
+    await ApiKeySetting.create({ provider: 'groq', value: 'rotated-groq-key', updatedBy: adminId });
+
+    global.fetch = jest.fn(async (url, options) => {
+      expect(JSON.parse(options.body)).toEqual({ transcript: 't', instructions: 'i', api_key_override: 'rotated-groq-key' });
+      return { ok: true, json: async () => ({ summary: 'ok', score: 9, findings: [] }) };
+    });
+
+    await audit('t', 'i');
+  });
+
+  it('omits api_key_override when nothing is rotated for the active provider', async () => {
+    process.env.LLM_PROVIDER = 'groq';
+
+    global.fetch = jest.fn(async (url, options) => {
+      expect(JSON.parse(options.body)).toEqual({ transcript: 't', instructions: 'i' });
+      return { ok: true, json: async () => ({ summary: 'ok', score: 9, findings: [] }) };
+    });
+
+    await audit('t', 'i');
   });
 });

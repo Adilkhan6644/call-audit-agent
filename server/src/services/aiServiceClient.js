@@ -1,4 +1,5 @@
 const { AppError } = require('../errors');
+const apiKeys = require('./apiKeys');
 
 // ai-service owns the only retry policy (ai_client_wrapper.py) — this client
 // does not retry, it only bounds how long a stuck request can hang.
@@ -41,8 +42,11 @@ async function transcribe(buffer, filename, contentType) {
 
 /** Returns the ai-service AuditResultSchema shape: { summary, score, findings }. */
 async function audit(transcript, instructions) {
+  const activeProvider = process.env.LLM_PROVIDER;
+  const apiKeyOverride = apiKeys.PROVIDERS.includes(activeProvider) ? await apiKeys.getRaw(activeProvider) : null;
+
   return callInternal('/internal/audit', {
-    body: JSON.stringify({ transcript, instructions }),
+    body: JSON.stringify({ transcript, instructions, api_key_override: apiKeyOverride || undefined }),
     headers: { 'Content-Type': 'application/json' },
   });
 }
