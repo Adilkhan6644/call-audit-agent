@@ -1,7 +1,7 @@
 import httpx
 
-from app.core.exceptions import AppError
 from app.services.llm.base import StructuredAuditResult
+from app.services.llm.errors import classify_provider_failure
 from app.services.llm.prompt import SYSTEM_PROMPT, build_user_prompt, parse_audit_json, truncate_transcript
 
 
@@ -28,7 +28,7 @@ class GroqLlmProvider:
             timeout=60,
         )
         if response.status_code >= 400:
-            raise AppError("Groq audit request failed", status_code=502)
+            raise classify_provider_failure("Groq", response)
 
         content = response.json()["choices"][0]["message"]["content"]
         data = parse_audit_json(content)

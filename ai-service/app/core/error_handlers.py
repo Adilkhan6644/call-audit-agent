@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.exceptions import AppError
+from app.core.provider_exceptions import ProviderQuotaExceededError
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,8 @@ def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
-        return _error_response(exc.status_code, "app_error", exc.message)
+        code = "provider_quota_exceeded" if isinstance(exc, ProviderQuotaExceededError) else "app_error"
+        return _error_response(exc.status_code, code, exc.message)
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(
