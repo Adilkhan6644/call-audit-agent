@@ -9,6 +9,7 @@ const { getVisibleCategory } = require('../services/categories');
 const { runAuditPipeline } = require('../services/auditPipeline');
 const { buildAuditJobsCsv } = require('../services/csvExport');
 const { buildAuditJobsPdf } = require('../services/pdfExport');
+const { auditLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 router.use(authenticate);
@@ -42,7 +43,7 @@ async function getOwnAuditJob(jobId, currentUser) {
  *       201: { description: Created (completed or failed — pipeline runs synchronously) }
  *       409: { description: An audit is already running for this recording }
  */
-router.post('/audits', async (req, res) => {
+router.post('/audits', auditLimiter, async (req, res) => {
   const { categoryId, recordingId } = req.body;
   if (!categoryId || !recordingId) {
     throw new AppError('categoryId and recordingId are required', 422, 'validation_error');

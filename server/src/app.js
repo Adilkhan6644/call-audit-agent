@@ -4,6 +4,7 @@ const multer = require('multer');
 const swaggerUi = require('swagger-ui-express');
 
 const swaggerSpec = require('./swagger');
+const { generalLimiter } = require('./middleware/rateLimit');
 const healthRouter = require('./routes/health');
 const readinessRouter = require('./routes/readiness');
 const authRouter = require('./routes/auth');
@@ -17,6 +18,7 @@ const adminRouter = require('./routes/admin');
 const app = express();
 
 app.use(express.json());
+app.use(generalLimiter);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(healthRouter);
 app.use(readinessRouter);
