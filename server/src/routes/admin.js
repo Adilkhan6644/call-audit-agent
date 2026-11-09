@@ -3,6 +3,8 @@ const express = require('express');
 const authenticate = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 const apiKeys = require('../services/apiKeys');
+const AdminAlert = require('../models/adminAlert');
+const { NotFoundError } = require('../errors');
 
 const router = express.Router();
 router.use(authenticate, adminOnly);
@@ -51,6 +53,53 @@ router.get('/admin/api-keys', async (req, res) => {
 router.put('/admin/api-keys/:provider', async (req, res) => {
   const entry = await apiKeys.rotate(req.params.provider, req.body.value, req.user);
   res.json(entry);
+});
+
+/**
+ * @openapi
+ * /admin/alerts:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List admin alerts (defaults to unresolved only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: resolved
+ *         schema: { type: boolean, default: false }
+ *     responses:
+ *       200: { description: OK }
+ */
+router.get('/admin/alerts', async (req, res) => {
+  const resolved = req.query.resolved === 'true';
+  const alerts = await AdminAlert.find({ resolved }).sort({ lastSeenAt: -1 });
+  res.json(alerts);
+});
+
+/**
+ * @openapi
+ * /admin/alerts/{id}/resolve:
+ *   patch:
+ *     tags: [Admin]
+ *     summary: Mark an admin alert resolved
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       404: { description: Not found }
+ */
+router.patch('/admin/alerts/:id/resolve', async (req, res) => {
+  const alert = await AdminAlert.findById(req.params.id);
+  if (!alert) {
+    throw new NotFoundError('Alert not found');
+  }
+  alert.resolved = true;
+  alert.resolvedAt = new Date();
+  await alert.save();
+  res.json(alert);
 });
 
 module.exports = router;
