@@ -59,7 +59,7 @@ def transcribe(file: UploadFile = File(...)) -> TranscriptResultOut:
 
 @router.post("/audit", response_model=AuditResultSchema, summary="Audit a transcript against instructions (AI service only)")
 def audit(payload: AuditRequestIn) -> AuditResultSchema:
-    provider = get_llm_provider()
+    provider = get_llm_provider(api_key_override=payload.api_key_override)
     result = call_with_retry(provider.audit, payload.transcript, payload.instructions)
     return validate_audit_result(
         {"summary": result.summary, "score": result.score, "findings": result.findings}

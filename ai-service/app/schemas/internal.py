@@ -18,3 +18,4 @@ class TranscriptResultOut(BaseModel):
 class AuditRequestIn(BaseModel):
     transcript: str
     instructions: str
+    api_key_override: str | None = None

@@ -21,6 +21,16 @@ def test_factory_rejects_unknown_provider():
         get_llm_provider("claude")
 
 
+def test_factory_uses_api_key_override_when_given():
+    provider = get_llm_provider("groq", api_key_override="override-key")
+    assert provider._api_key == "override-key"
+
+
+def test_factory_falls_back_to_settings_key_when_no_override_given():
+    provider = get_llm_provider("groq")
+    assert provider._api_key != "override-key"
+
+
 def test_parse_audit_json_extracts_object_wrapped_in_markdown_fences():
     text = '```json\n{"summary": "ok", "score": 8, "findings": ["a"]}\n```'
     assert parse_audit_json(text) == {"summary": "ok", "score": 8, "findings": ["a"]}
