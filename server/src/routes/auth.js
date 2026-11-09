@@ -3,6 +3,7 @@ const express = require('express');
 const User = require('../models/user');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { createAccessToken } = require('../utils/jwt');
+const refreshTokens = require('../services/refreshTokens');
 const { ConflictError, UnauthorizedError } = require('../errors');
 const authenticate = require('../middleware/auth');
 
@@ -92,7 +93,63 @@ router.post('/auth/login', async (req, res) => {
 
   await syncAdminRole(user);
   const accessToken = createAccessToken(user._id);
-  res.json({ access_token: accessToken, token_type: 'bearer' });
+  const refreshToken = await refreshTokens.issue(user._id);
+  res.json({ access_token: accessToken, refresh_token: refreshToken, token_type: 'bearer' });
+});
+
+/**
+ * @openapi
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Exchange a refresh token for a new access/refresh token pair (rotates the refresh token)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refresh_token]
+ *             properties:
+ *               refresh_token: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       401: { description: Refresh token missing, invalid, expired, or already used }
+ */
+router.post('/auth/refresh', async (req, res) => {
+  const { refresh_token: refreshToken } = req.body;
+  if (!refreshToken) {
+    throw new UnauthorizedError();
+  }
+
+  const { accessToken, refreshToken: newRefreshToken } = await refreshTokens.rotate(refreshToken);
+  res.json({ access_token: accessToken, refresh_token: newRefreshToken, token_type: 'bearer' });
+});
+
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Revoke a refresh token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refresh_token]
+ *             properties:
+ *               refresh_token: { type: string }
+ *     responses:
+ *       204: { description: No Content }
+ */
+router.post('/auth/logout', async (req, res) => {
+  const { refresh_token: refreshToken } = req.body;
+  if (refreshToken) {
+    await refreshTokens.revoke(refreshToken);
+  }
+  res.status(204).send();
 });
 
 /**
