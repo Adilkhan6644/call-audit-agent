@@ -26,6 +26,7 @@ const Category = require('../src/models/category');
 const AuditInstruction = require('../src/models/auditInstruction');
 const Recording = require('../src/models/recording');
 const AuditJob = require('../src/models/auditJob');
+const AdminAlert = require('../src/models/adminAlert');
 
 const TEST_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/call_auditing_test';
 const MP3_HEADER = Buffer.concat([Buffer.from('ID3'), Buffer.alloc(13)]);
@@ -61,6 +62,7 @@ afterEach(async () => {
   await AuditInstruction.deleteMany({});
   await Recording.deleteMany({});
   await AuditJob.deleteMany({});
+  await AdminAlert.deleteMany({});
 });
 
 afterAll(async () => {
@@ -95,9 +97,12 @@ describe('POST /audits', () => {
     expect(response.body.status).toBe('failed');
     expect(response.body.result).toBeNull();
     expect(response.body.errorMessage).toBe('Audit processing failed');
+
+    const alerts = await AdminAlert.find({});
+    expect(alerts).toHaveLength(0);
   });
 
-  it('still fails the job with the same sanitized message on a quota-exceeded AI-service failure', async () => {
+  it('still fails the job with the same sanitized message, and raises exactly one admin alert, on a quota-exceeded AI-service failure', async () => {
     const { AppError } = require('../src/errors');
     const headers = await registerAndLogin('audit-quota@example.com');
     const { categoryId, recordingId } = await setupCategoryInstructionAndRecording(headers);
@@ -113,6 +118,11 @@ describe('POST /audits', () => {
     expect(response.body.status).toBe('failed');
     expect(response.body.result).toBeNull();
     expect(response.body.errorMessage).toBe('Audit processing failed');
+
+    const alerts = await AdminAlert.find({});
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].type).toBe('provider_quota_exceeded');
+    expect(alerts[0].resolved).toBe(false);
   });
 
   it('blocks a second concurrent run for the same recording with 409, but allows a re-run after completion', async () => {

@@ -2,6 +2,7 @@ const AuditInstruction = require('../models/auditInstruction');
 const storage = require('./storage');
 const aiServiceClient = require('./aiServiceClient');
 const { recordUsage } = require('./usage');
+const { raiseProviderQuotaAlert } = require('./adminAlerts');
 
 /**
  * Runs transcribe -> audit -> persist for a freshly-created pending job, and
@@ -31,8 +32,11 @@ async function runAuditPipeline(job, recording) {
     await job.save();
     await recordUsage(job.ownerId, job._id);
   } catch (err) {
-    // err.code === 'provider_quota_exceeded' is a hook point for the admin
-    // alert wired up separately — the job itself always fails the same way.
+    if (err.code === 'provider_quota_exceeded') {
+      await raiseProviderQuotaAlert('An LLM provider is out of credits/quota.');
+    }
+    // Job fails the same sanitized way regardless of cause — never the raw
+    // provider error, which could include transcript content.
     job.status = 'failed';
     job.result = null;
     job.errorMessage = 'Audit processing failed';
