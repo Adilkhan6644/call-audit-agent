@@ -1,6 +1,7 @@
 const AuditInstruction = require('../models/auditInstruction');
 const storage = require('./storage');
 const aiServiceClient = require('./aiServiceClient');
+const { recordUsage } = require('./usage');
 
 /**
  * Runs transcribe -> audit -> persist for a freshly-created pending job, and
@@ -28,6 +29,7 @@ async function runAuditPipeline(job, recording) {
     job.result = auditResult;
     job.completedAt = new Date();
     await job.save();
+    await recordUsage(job.ownerId, job._id);
   } catch {
     job.status = 'failed';
     job.result = null;
