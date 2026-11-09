@@ -131,6 +131,43 @@ describe('POST /audits', () => {
   });
 });
 
+describe('GET /audits', () => {
+  it('filters, paginates, and never surfaces another user\'s jobs', async () => {
+    const headersA = await registerAndLogin('list-a@example.com');
+    const headersB = await registerAndLogin('list-b@example.com');
+    const ownerId = (await request(app).get('/auth/me').set(headersA)).body.id;
+
+    const { categoryId: catOther } = await setupCategoryInstructionAndRecording(headersA);
+    const { categoryId, recordingId: rec1 } = await setupCategoryInstructionAndRecording(headersA);
+    const recording2 = await request(app)
+      .post('/recordings')
+      .set(headersA)
+      .attach('file', Buffer.concat([MP3_HEADER, Buffer.from('audio2')]), 'call2.mp3');
+
+    await AuditJob.create({ recordingId: rec1, instructionId: new mongoose.Types.ObjectId(), categoryId, ownerId, status: 'completed' });
+    await AuditJob.create({ recordingId: recording2.body._id, instructionId: new mongoose.Types.ObjectId(), categoryId, ownerId, status: 'failed' });
+    await AuditJob.create({ recordingId: new mongoose.Types.ObjectId(), instructionId: new mongoose.Types.ObjectId(), categoryId: catOther, ownerId, status: 'completed' });
+
+    const otherOwnerId = (await request(app).get('/auth/me').set(headersB)).body.id;
+    await AuditJob.create({ recordingId: new mongoose.Types.ObjectId(), instructionId: new mongoose.Types.ObjectId(), categoryId, ownerId: otherOwnerId, status: 'completed' });
+
+    const byStatus = await request(app).get('/audits').query({ status: 'failed' }).set(headersA);
+    expect(byStatus.body.items).toHaveLength(1);
+    expect(byStatus.body.items[0].status).toBe('failed');
+
+    const byCategory = await request(app).get('/audits').query({ categoryId }).set(headersA);
+    expect(byCategory.body.total).toBe(2);
+
+    const page1 = await request(app).get('/audits').query({ pageSize: 2, page: 1 }).set(headersA);
+    expect(page1.body.items).toHaveLength(2);
+    expect(page1.body.total).toBe(3);
+
+    const forB = await request(app).get('/audits').set(headersB);
+    expect(forB.body.total).toBe(1);
+    expect(forB.body.items[0].ownerId).toBe(otherOwnerId);
+  });
+});
+
 describe('GET /audits/:id', () => {
   it('is owner-scoped', async () => {
     const headersA = await registerAndLogin('getaudit-a@example.com');

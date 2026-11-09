@@ -75,6 +75,52 @@ router.post('/audits', async (req, res) => {
 
 /**
  * @openapi
+ * /audits:
+ *   get:
+ *     tags: [Audits]
+ *     summary: List your own audit jobs, filterable and paginated
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [pending, processing, completed, failed] }
+ *       - in: query
+ *         name: categoryId
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: pageSize
+ *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, default: '-createdAt' }
+ *     responses:
+ *       200: { description: OK }
+ */
+router.get('/audits', async (req, res) => {
+  const { status, categoryId, sort = '-createdAt' } = req.query;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+
+  const filter = { ownerId: req.user._id };
+  if (status) filter.status = status;
+  if (categoryId) filter.categoryId = categoryId;
+
+  const [items, total] = await Promise.all([
+    AuditJob.find(filter)
+      .sort(sort)
+      .skip((page - 1) * pageSize)
+      .limit(pageSize),
+    AuditJob.countDocuments(filter),
+  ]);
+
+  res.json({ items, total, page, pageSize });
+});
+
+/**
+ * @openapi
  * /audits/{id}:
  *   get:
  *     tags: [Audits]
