@@ -24,6 +24,16 @@ describe('User model', () => {
       /duplicate key/
     );
   });
+
+  it('defaults a new user to the "user" role', async () => {
+    const user = await User.create({ email: 'role@example.com', hashedPassword: 'x' });
+    expect(user.role).toBe('user');
+  });
+
+  it('rejects an invalid role value', async () => {
+    const user = new User({ email: 'badrole@example.com', hashedPassword: 'x', role: 'superuser' });
+    await expect(user.validate()).rejects.toThrow();
+  });
 });
 
 describe('password hashing', () => {
