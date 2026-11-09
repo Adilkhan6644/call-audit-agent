@@ -8,6 +8,7 @@ const { getOwnRecording } = require('../services/recordings');
 const { getVisibleCategory } = require('../services/categories');
 const { runAuditPipeline } = require('../services/auditPipeline');
 const { buildAuditJobsCsv } = require('../services/csvExport');
+const { buildAuditJobsPdf } = require('../services/pdfExport');
 
 const router = express.Router();
 router.use(authenticate);
@@ -135,6 +136,24 @@ router.get('/audits/export.csv', async (req, res) => {
   res.set('Content-Type', 'text/csv');
   res.set('Content-Disposition', 'attachment; filename="audits.csv"');
   res.send(buildAuditJobsCsv(jobs));
+});
+
+/**
+ * @openapi
+ * /audits/export.pdf:
+ *   get:
+ *     tags: [Audits]
+ *     summary: Export your own audit jobs as PDF
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: OK, content: { application/pdf: {} } }
+ */
+router.get('/audits/export.pdf', async (req, res) => {
+  const jobs = await AuditJob.find({ ownerId: req.user._id }).sort({ createdAt: -1 });
+  const pdf = await buildAuditJobsPdf(jobs);
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', 'attachment; filename="audits.pdf"');
+  res.send(pdf);
 });
 
 /**
