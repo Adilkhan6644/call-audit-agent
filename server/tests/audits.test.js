@@ -168,6 +168,26 @@ describe('GET /audits', () => {
   });
 });
 
+describe('GET /audits/export.csv', () => {
+  it('is ownership-gated and includes only the caller\'s own jobs', async () => {
+    const headersA = await registerAndLogin('export-a@example.com');
+    const headersB = await registerAndLogin('export-b@example.com');
+    const { categoryId, recordingId } = await setupCategoryInstructionAndRecording(headersA);
+
+    aiServiceClient.transcribe.mockResolvedValue({ text: 't', language: 'en', duration_seconds: 1, segments: [] });
+    aiServiceClient.audit.mockResolvedValue({ summary: 'export me', score: 7, findings: [] });
+    const created = await request(app).post('/audits').set(headersA).send({ categoryId, recordingId });
+
+    const csvA = await request(app).get('/audits/export.csv').set(headersA);
+    expect(csvA.status).toBe(200);
+    expect(csvA.text).toContain('export me');
+    expect(csvA.text).toContain(String(created.body._id));
+
+    const csvB = await request(app).get('/audits/export.csv').set(headersB);
+    expect(csvB.text).not.toContain('export me');
+  });
+});
+
 describe('GET /audits/:id', () => {
   it('is owner-scoped', async () => {
     const headersA = await registerAndLogin('getaudit-a@example.com');
