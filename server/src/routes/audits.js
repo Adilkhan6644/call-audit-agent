@@ -7,6 +7,7 @@ const { AppError, NotFoundError, ConflictError } = require('../errors');
 const { getOwnRecording } = require('../services/recordings');
 const { getVisibleCategory } = require('../services/categories');
 const { runAuditPipeline } = require('../services/auditPipeline');
+const { buildAuditJobsCsv } = require('../services/csvExport');
 
 const router = express.Router();
 router.use(authenticate);
@@ -117,6 +118,23 @@ router.get('/audits', async (req, res) => {
   ]);
 
   res.json({ items, total, page, pageSize });
+});
+
+/**
+ * @openapi
+ * /audits/export.csv:
+ *   get:
+ *     tags: [Audits]
+ *     summary: Export your own audit jobs as CSV
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: OK, content: { text/csv: {} } }
+ */
+router.get('/audits/export.csv', async (req, res) => {
+  const jobs = await AuditJob.find({ ownerId: req.user._id }).sort({ createdAt: -1 });
+  res.set('Content-Type', 'text/csv');
+  res.set('Content-Disposition', 'attachment; filename="audits.csv"');
+  res.send(buildAuditJobsCsv(jobs));
 });
 
 /**
