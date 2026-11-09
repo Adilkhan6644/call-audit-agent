@@ -1,0 +1,97 @@
+const express = require('express');
+
+const AuditJob = require('../models/auditJob');
+const AuditInstruction = require('../models/auditInstruction');
+const authenticate = require('../middleware/auth');
+const { AppError, NotFoundError, ConflictError } = require('../errors');
+const { getOwnRecording } = require('../services/recordings');
+const { getVisibleCategory } = require('../services/categories');
+const { runAuditPipeline } = require('../services/auditPipeline');
+
+const router = express.Router();
+router.use(authenticate);
+
+async function getOwnAuditJob(jobId, currentUser) {
+  const job = await AuditJob.findOne({ _id: jobId, ownerId: currentUser._id });
+  if (!job) {
+    throw new NotFoundError('Audit job not found');
+  }
+  return job;
+}
+
+/**
+ * @openapi
+ * /audits:
+ *   post:
+ *     tags: [Audits]
+ *     summary: Run an audit on a recording against a category's active instruction
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [categoryId, recordingId]
+ *             properties:
+ *               categoryId: { type: string }
+ *               recordingId: { type: string }
+ *     responses:
+ *       201: { description: Created (completed or failed — pipeline runs synchronously) }
+ *       409: { description: An audit is already running for this recording }
+ */
+router.post('/audits', async (req, res) => {
+  const { categoryId, recordingId } = req.body;
+  if (!categoryId || !recordingId) {
+    throw new AppError('categoryId and recordingId are required', 422, 'validation_error');
+  }
+
+  const recording = await getOwnRecording(recordingId, req.user);
+  await getVisibleCategory(categoryId, req.user);
+
+  const instruction = await AuditInstruction.findOne({ categoryId, ownerId: req.user._id, isActive: true });
+  if (!instruction) {
+    throw new NotFoundError('No active instruction for this category');
+  }
+
+  const runningDuplicate = await AuditJob.findOne({
+    recordingId,
+    status: { $in: ['pending', 'processing'] },
+  });
+  if (runningDuplicate) {
+    throw new ConflictError('An audit is already running for this recording');
+  }
+
+  const job = await AuditJob.create({
+    recordingId,
+    instructionId: instruction._id,
+    categoryId,
+    ownerId: req.user._id,
+  });
+
+  const completedJob = await runAuditPipeline(job, recording);
+  res.status(201).json(completedJob);
+});
+
+/**
+ * @openapi
+ * /audits/{id}:
+ *   get:
+ *     tags: [Audits]
+ *     summary: Get an audit job and its result
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK (result is null while pending/processing) }
+ *       404: { description: Not found or not owned }
+ */
+router.get('/audits/:id', async (req, res) => {
+  const job = await getOwnAuditJob(req.params.id, req.user);
+  res.json(job);
+});
+
+module.exports = router;

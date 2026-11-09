@@ -3,9 +3,8 @@ const multer = require('multer');
 
 const Recording = require('../models/recording');
 const authenticate = require('../middleware/auth');
-const { NotFoundError } = require('../errors');
 const storage = require('../services/storage');
-const { deletePreviousDaysRecordings } = require('../services/recordings');
+const { getOwnRecording, deletePreviousDaysRecordings } = require('../services/recordings');
 
 const router = express.Router();
 router.use(authenticate);
@@ -14,14 +13,6 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: storage.MAX_UPLOAD_SIZE_BYTES },
 });
-
-async function getOwnRecording(recordingId, currentUser) {
-  const recording = await Recording.findOne({ _id: recordingId, ownerId: currentUser._id });
-  if (!recording) {
-    throw new NotFoundError('Recording not found');
-  }
-  return recording;
-}
 
 /**
  * @openapi
