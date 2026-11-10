@@ -4,7 +4,9 @@
     {
       "src": "api/index.js",
       "use": "@vercel/node",
-      "config": { "includeFiles": "node_modules/swagger-ui-dist/**" }
+      "config": {
+        "includeFiles": ["node_modules/swagger-ui-dist/**", "src/routes/**"]
+      }
     }
   ],
   "routes": [{ "src": "/(.*)", "dest": "api/index.js" }]
