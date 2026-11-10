@@ -19,6 +19,15 @@ const app = express();
 
 app.use(express.json());
 app.use(generalLimiter);
+// swagger-ui-express renders relative asset URLs (./swagger-ui.css etc.), so the
+// bare path (no trailing slash) must redirect first or those assets resolve to
+// the site root and 401 out of an unrelated router's unscoped `authenticate`.
+app.use((req, res, next) => {
+  // app.get('/docs') would also match '/docs/' (Express's non-strict routing),
+  // causing a redirect loop — compare the exact path string instead.
+  if (req.path === '/docs') return res.redirect(301, '/docs/');
+  next();
+});
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(healthRouter);
 app.use(readinessRouter);
