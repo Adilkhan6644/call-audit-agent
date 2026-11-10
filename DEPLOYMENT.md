@@ -12,11 +12,11 @@ required). Each is its own Vercel project, same GitHub repo.
 - **Env vars** (same keys as `server/.env.example`):
   `MONGODB_URI`, `JWT_SECRET`, `AI_SERVICE_URL` (→ ai-service's deployed URL
   + `/api/v1`), `LLM_PROVIDER`, `INTERNAL_API_SECRET`, `SUPABASE_URL`,
-  `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET_NAME`, `ADMIN_EMAILS`,
-  `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`, `AUDIT_RATE_LIMIT_MAX`
+    `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET_NAME`, `ADMIN_EMAILS`,
+    `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`, `AUDIT_RATE_LIMIT_MAX`
 - **MongoDB Atlas**: Network Access must allow `0.0.0.0/0` — Vercel functions
   don't have a fixed outbound IP.
-- Swagger UI: `https://<app>.vercel.app/docs/` (trailing slash; bare `/docs`
+- Swagger UI:[call-audit-agent-nine.vercel.app/docs/#](https://call-audit-agent-nine.vercel.app/docs/#/)  (trailing slash; bare `/docs`
   redirects there automatically).
 
 ## 2. `ai-service` (Python/FastAPI)
@@ -37,7 +37,7 @@ required). Each is its own Vercel project, same GitHub repo.
   `APP_ENV=production`, `STT_PROVIDER=deepgram`, `DEEPGRAM_API_KEY`,
   `LLM_PROVIDER=groq`, `GROQ_API_KEY`, `GROQ_MODEL`,
   `GROQ_MAX_INPUT_TOKENS`, `INTERNAL_API_SECRET`
-- Health check: `https://<app>.vercel.app/api/v1/health`
+- Health check: [call-audit-agent-py7u-dha06neul-adil-7c7a.vercel.app/docs#](https://call-audit-agent-py7u-dha06neul-adil-7c7a.vercel.app/docs#/)
 
 ## Auth model between the two services
 
