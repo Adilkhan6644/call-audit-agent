@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import AuthLayout from '../components/AuthLayout'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -25,23 +26,23 @@ export default function Login() {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
-      <form onSubmit={handleSubmit} className="panel" style={{ width: 320 }}>
-        <div className="label" style={{ marginBottom: 16 }}>ACCESS REQUEST</div>
+    <AuthLayout>
+      <form onSubmit={handleSubmit}>
+        <h2 style={{ marginTop: 0 }}>Log in</h2>
         {error && <div className="error-state" style={{ marginBottom: 12 }}>{error}</div>}
         <div style={{ marginBottom: 10 }}>
-          <input type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%' }} />
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%' }} />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <input type="password" placeholder="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%' }} />
+          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%' }} />
         </div>
         <button type="submit" disabled={submitting} style={{ width: '100%' }}>
           {submitting ? 'Verifying…' : 'Log In'}
         </button>
-        <div style={{ marginTop: 12, fontSize: 12 }}>
-          No account? <a href="/register">Register</a>
+        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-dim)' }}>
+          No account? <Link to="/register">Register</Link>
         </div>
       </form>
-    </div>
+    </AuthLayout>
   )
 }
