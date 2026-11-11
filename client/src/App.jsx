@@ -5,6 +5,8 @@ import Shell from './components/Shell'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import Categories from './pages/Categories'
+import Instructions from './pages/Instructions'
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Shell />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/categories/:id/instructions" element={<Instructions />} />
             </Route>
           </Route>
           <Route element={<AdminRoute />}>
