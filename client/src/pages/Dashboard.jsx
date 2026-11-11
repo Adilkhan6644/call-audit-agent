@@ -67,7 +67,7 @@ export default function Dashboard() {
         <StatTile label="Pass Rate" value={passRate != null ? `${passRate}%` : '—'} />
       </div>
 
-      <div className="panel" style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 20 }}>
         <div className="label" style={{ marginBottom: 8 }}>CATEGORY / AUDIT NETWORK</div>
         <CategoryAuditGraph categories={categories} audits={audits} />
       </div>

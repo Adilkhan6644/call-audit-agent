@@ -150,3 +150,94 @@ button:disabled { background: var(--text-dim); cursor: not-allowed; }
   .auth-hero { display: none; }
 }
 
+/* --- Category/audit network graph: dark stage, glowing animated nodes --- */
+.graph-stage {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  background: radial-gradient(ellipse at center, #16324a 0%, #0c1f30 70%, #081722 100%);
+  overflow: hidden;
+}
+
+.graph-link {
+  stroke-dasharray: 5 6;
+  animation: graph-flow 1.1s linear infinite;
+}
+@keyframes graph-flow {
+  to { stroke-dashoffset: -22; }
+}
+
+.graph-node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: graph-node-enter 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes graph-node-enter {
+  from { opacity: 0; transform: scale(0.15); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.graph-node-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--cyan), transparent 35%, var(--purple), transparent 75%, var(--cyan));
+  filter: blur(3px);
+  opacity: 0.85;
+  animation: graph-spin 5s linear infinite;
+}
+@keyframes graph-spin {
+  to { transform: rotate(360deg); }
+}
+
+.graph-node-sphere {
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  animation: graph-pulse 2.4s ease-in-out infinite;
+}
+@keyframes graph-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+}
+
+.graph-detail {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #e7f1fb;
+  background: radial-gradient(ellipse at center, #16324a 0%, #0c1f30 75%, #081722 100%);
+  animation: graph-zoom-in 0.35s ease-out both;
+  padding: 24px;
+}
+@keyframes graph-zoom-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+.graph-detail .back-button {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(255,255,255,0.1);
+}
+.graph-detail .gap-badge {
+  margin-top: 14px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
