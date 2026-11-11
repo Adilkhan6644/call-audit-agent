@@ -18,6 +18,16 @@ const adminRouter = require('./routes/admin');
 const app = express();
 
 app.use(express.json());
+// Dev-only CORS: the frontend (client/, served separately by Vite) calls this
+// API cross-origin. Hand-rolled instead of the `cors` package — it's one
+// header plus an OPTIONS short-circuit, not worth a dependency.
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN || 'http://localhost:5173');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use(generalLimiter);
 // swagger-ui-express renders relative asset URLs (./swagger-ui.css etc.), so the
 // bare path (no trailing slash) must redirect first or those assets resolve to

@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
-import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Icon from './icons'
 
-const WIDTH = 760
-const HEIGHT = 380
+const SPHERE = { x: 12, y: 50 }
+const TILE_X = 29
+const FAN_ORIGIN = { x: 50, y: 50 }
+const CURVE_END_X = 51
+const ROW_TEXT_X = 53
+const ROWS_Y = [6, 94]
+const TILE_ICONS = ['folder', 'chart', 'shield', 'mic', 'play']
 
 function scoreColor(score) {
   if (score == null) return '#94a3b8'
@@ -11,54 +16,68 @@ function scoreColor(score) {
   return '#ff6b6b'
 }
 
-function sphereGradient(color) {
-  return `radial-gradient(circle at 35% 30%, #fff, ${color} 55%, ${color} 100%)`
+function curvePath(x0, y0, x1, y1) {
+  const midX = x0 + (x1 - x0) * 0.55
+  return `M ${x0} ${y0} C ${midX} ${y0}, ${midX} ${y1}, ${x1} ${y1}`
 }
 
 /**
- * Categories as glowing hub nodes, recent audits as orbiting child nodes —
- * d3-force computes a static 2D layout (not the reference video's WebGL
- * particle engine), rendered with animated CSS (pulsing glow rings, flowing
- * energy lines, staggered entrance) and a click-to-zoom detail view.
+ * Draws the path in (stroke-dashoffset: length → 0, ease-out-expo — the
+ * standard "self-drawing SVG line" technique) then hands off to the
+ * continuous marching-ants flow animation once it's fully revealed.
  */
-export default function CategoryAuditGraph({ categories, audits }) {
-  const [positioned, setPositioned] = useState(null)
-  const [selected, setSelected] = useState(null)
+function AnimatedLink({ d, color, delay = 0 }) {
+  const ref = useRef(null)
+  const [flowing, setFlowing] = useState(false)
 
   useEffect(() => {
-    if (!categories.length) {
-      setPositioned({ nodes: [], links: [] })
-      return
+    const path = ref.current
+    if (!path || typeof path.getTotalLength !== 'function') {
+      setFlowing(true)
+      return undefined
     }
+    const length = path.getTotalLength()
+    path.style.transition = 'none'
+    path.style.strokeDasharray = `${length}`
+    path.style.strokeDashoffset = `${length}`
+    const raf = requestAnimationFrame(() => {
+      path.style.transition = `stroke-dashoffset 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`
+      path.style.strokeDashoffset = '0'
+    })
+    const timeout = setTimeout(() => {
+      path.style.transition = ''
+      path.style.strokeDasharray = ''
+      path.style.strokeDashoffset = ''
+      setFlowing(true)
+    }, delay + 750)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timeout)
+    }
+  }, [d, delay])
 
-    const categoryIds = new Set(categories.map((c) => c._id))
-    const categoryNodes = categories.map((c) => ({ id: c._id, label: c.name, type: 'category' }))
-    const auditNodes = audits
-      .filter((a) => categoryIds.has(a.categoryId))
-      .slice(0, 24)
-      .map((a) => ({
-        id: a._id,
-        label: a.status === 'completed' && a.result ? String(Math.round(a.result.score)) : a.status.slice(0, 4),
-        type: 'audit',
-        score: a.result?.score,
-        categoryId: a.categoryId,
-      }))
+  return (
+    <path
+      ref={ref}
+      d={d}
+      fill="none"
+      stroke={color}
+      strokeWidth={1}
+      opacity={0.6}
+      vectorEffect="non-scaling-stroke"
+      className={flowing ? 'graph-link-flow' : ''}
+    />
+  )
+}
 
-    const nodes = [...categoryNodes, ...auditNodes]
-    const links = auditNodes.map((a) => ({ source: a.categoryId, target: a.id }))
-
-    const sim = forceSimulation(nodes)
-      .force('link', forceLink(links).id((d) => d.id).distance(100).strength(0.6))
-      .force('charge', forceManyBody().strength(-160))
-      .force('center', forceCenter(WIDTH / 2, HEIGHT / 2))
-      .force('collide', forceCollide(36))
-      .stop()
-
-    for (let i = 0; i < 260; i++) sim.tick()
-
-    setPositioned({ nodes, links })
-    setSelected(null)
-  }, [categories, audits])
+/**
+ * Left: category tiles fed by curved lines from a glowing central sphere.
+ * The selected tile's line continues into a wide fan of its audits on the
+ * right, each row ending in a small marker dot on the curve — matching the
+ * reference screenshot's radial hub layout.
+ */
+export default function CategoryAuditGraph({ categories, audits, onSelect }) {
+  const [selectedId, setSelectedId] = useState(null)
 
   const categoryStats = useMemo(() => {
     const stats = {}
@@ -75,93 +94,124 @@ export default function CategoryAuditGraph({ categories, audits }) {
     return stats
   }, [categories, audits])
 
-  if (!positioned) return <div className="loading-state">BUILDING GRAPH…</div>
-  if (!positioned.nodes.length) {
+  if (!categories.length) {
     return <div className="empty-state">No categories yet — add one to populate the graph.</div>
   }
 
-  const nodeById = Object.fromEntries(positioned.nodes.map((n) => [n.id, n]))
+  const selected = categories.find((c) => c._id === selectedId) || categories[0]
 
-  if (selected) {
-    return <NodeDetail node={selected} categoryStats={categoryStats} onBack={() => setSelected(null)} />
+  // Pin the selected tile to the middle slot so the sphere → tile → fan
+  // line reads as one straight hub-and-spoke, whatever was clicked.
+  const shown = categories.length <= 5
+    ? categories.slice()
+    : [selected, ...categories.filter((c) => c._id !== selected._id).slice(0, 4)]
+  const tiles = shown.filter((c) => c._id !== selected._id)
+  const middleIndex = Math.floor(shown.length / 2)
+  tiles.splice(middleIndex, 0, selected)
+  const tileGap = 9
+  const tileY = (i) => 50 + (i - middleIndex) * tileGap
+
+  const rows = audits.filter((a) => a.categoryId === selected._id)
+  const rowGap = rows.length > 1 ? (ROWS_Y[1] - ROWS_Y[0]) / (rows.length - 1) : 0
+  const rowY = (i) => (rows.length > 1 ? ROWS_Y[0] + i * rowGap : 50)
+
+  function pick(kind, node) {
+    if (kind === 'category') setSelectedId(node._id)
+    onSelect?.(kind, node)
   }
 
   return (
-    <div className="graph-stage" style={{ height: HEIGHT }}>
-      <svg width="100%" height={HEIGHT} style={{ position: 'absolute', inset: 0 }}>
-        {positioned.links.map((l, i) => {
-          const source = typeof l.source === 'object' ? l.source : nodeById[l.source]
-          const target = typeof l.target === 'object' ? l.target : nodeById[l.target]
-          if (!source || !target) return null
-          return (
-            <line
-              key={i}
-              className="graph-link"
-              x1={source.x} y1={source.y} x2={target.x} y2={target.y}
-              stroke={scoreColor(target.score)}
-              strokeWidth={1.5}
-              opacity={0.6}
-            />
-          )
-        })}
+    <div className="graph-stage graph-stage--fullbleed">
+      <div className="graph-sphere-halo" style={{ left: `${SPHERE.x}%`, top: `${SPHERE.y}%` }} />
+      <div className="graph-sphere-label" style={{ left: `${SPHERE.x}%`, top: `${SPHERE.y}%` }}>
+        {selected.name}
+      </div>
+      <div
+        className="graph-node"
+        title={selected.name}
+        onClick={() => pick('category', selected)}
+        style={{ left: `${SPHERE.x}%`, top: `${SPHERE.y}%`, width: 92, height: 92, marginLeft: -46, marginTop: -46 }}
+      >
+        <div className="graph-node-ring" />
+        <div
+          className="graph-node-sphere"
+          style={{
+            width: 78,
+            height: 78,
+            background: 'radial-gradient(circle at 35% 30%, #fff, #8a7af2 55%, #4e3fb8 100%)',
+            boxShadow: '0 0 30px #8a7af2aa',
+          }}
+        />
+      </div>
+      <div className="gap-pill" style={{ left: `${SPHERE.x}%`, top: `${SPHERE.y}%` }}>
+        GAPS {categoryStats[selected._id]?.total ?? 0}
+      </div>
+
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="graph-svg">
+        {tiles.map((cat, i) => (
+          <AnimatedLink
+            key={cat._id}
+            d={curvePath(SPHERE.x, SPHERE.y, TILE_X, tileY(i))}
+            color={cat._id === selected._id ? '#f2c14e' : '#3fa9c9'}
+            delay={i * 60}
+          />
+        ))}
+        {rows.map((a, i) => (
+          <AnimatedLink
+            key={a._id}
+            d={curvePath(FAN_ORIGIN.x, FAN_ORIGIN.y, CURVE_END_X, rowY(i))}
+            color={scoreColor(a.result?.score)}
+            delay={150 + i * 40}
+          />
+        ))}
       </svg>
-      {positioned.nodes.map((n, i) => {
-        const size = n.type === 'category' ? 72 : 42
-        const color = n.type === 'category' ? '#f2c14e' : scoreColor(n.score)
+
+      {tiles.map((cat, i) => {
+        const stats = categoryStats[cat._id]
+        const isSelected = cat._id === selected._id
         return (
-          <div
-            key={n.id}
-            className="graph-node"
-            onClick={() => setSelected(n)}
-            style={{ left: n.x - size / 2, top: n.y - size / 2, width: size, height: size, animationDelay: `${i * 35}ms` }}
+          <button
+            key={cat._id}
+            title={cat.name}
+            className={`graph-category-tile${isSelected ? ' is-selected' : ''}`}
+            onClick={() => pick('category', cat)}
+            style={{ left: `${TILE_X}%`, top: `${tileY(i)}%`, animationDelay: `${i * 60 + 200}ms` }}
           >
-            <div className="graph-node-ring" />
-            <div
-              className="graph-node-sphere"
-              title={n.label}
-              style={{
-                width: size - 14,
-                height: size - 14,
-                background: sphereGradient(color),
-                color: n.type === 'category' ? '#3a2a00' : '#0c1f30',
-                fontSize: n.type === 'category' ? 11 : 10,
-                boxShadow: `0 0 18px ${color}99`,
-              }}
-            >
-              {n.type === 'category' ? n.label.slice(0, 10) : n.label}
-            </div>
-          </div>
+            <Icon name={TILE_ICONS[i % TILE_ICONS.length]} size={16} />
+            <span>
+              <span className="graph-category-count">{stats.total}</span>
+              <span className="graph-category-name">{cat.name}</span>
+            </span>
+          </button>
         )
       })}
-    </div>
-  )
-}
 
-function NodeDetail({ node, categoryStats, onBack }) {
-  const color = node.type === 'category' ? '#f2c14e' : scoreColor(node.score)
-  const stats = node.type === 'category' ? categoryStats[node.id] : null
-
-  return (
-    <div className="graph-stage graph-detail" style={{ height: HEIGHT }}>
-      <button className="back-button" onClick={onBack}>&larr; Back</button>
-      <div className="label" style={{ color: '#9fc4e3' }}>{node.type === 'category' ? 'CATEGORY' : 'AUDIT'}</div>
-      <h2 style={{ margin: '6px 0' }}>{node.type === 'category' ? node.label : `Score ${node.label}`}</h2>
-      <div
-        className="graph-node-sphere"
-        style={{
-          width: 140,
-          height: 140,
-          background: sphereGradient(color),
-          boxShadow: `0 0 50px ${color}aa`,
-          animation: 'graph-pulse 2.4s ease-in-out infinite',
-          marginTop: 12,
-        }}
-      />
-      {node.type === 'category' ? (
-        <div className="gap-badge">{stats.total} AUDITS{stats.avgScore != null ? ` · AVG ${stats.avgScore}` : ''}</div>
-      ) : (
-        <div className="gap-badge">{node.score != null ? `SCORE ${Math.round(node.score)}` : node.label.toUpperCase()}</div>
+      {rows.length === 0 && (
+        <div className="empty-state" style={{ position: 'absolute', left: `${ROW_TEXT_X}%`, top: '50%', transform: 'translateY(-50%)' }}>
+          No audits in this category yet.
+        </div>
       )}
+      {rows.map((a, i) => {
+        const score = a.result?.score
+        const color = scoreColor(score)
+        const title = a.status === 'completed' && a.result ? `Audit · score ${Math.round(score)}` : `Audit · ${a.status}`
+        const date = a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''
+        return (
+          <button
+            key={a._id}
+            title={title}
+            className="graph-row"
+            onClick={() => pick('audit', a)}
+            style={{ left: `${ROW_TEXT_X}%`, top: `${rowY(i)}%`, animationDelay: `${150 + i * 40 + 300}ms` }}
+          >
+            <span className="graph-row-dot" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
+            <span>
+              <span className="graph-row-title">{title}</span>
+              <span className="graph-row-meta">{date}</span>
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }
