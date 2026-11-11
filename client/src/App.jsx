@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Categories from './pages/Categories'
 import Instructions from './pages/Instructions'
 import Recordings from './pages/Recordings'
+import NewAudit from './pages/NewAudit'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
               <Route path="/categories" element={<Categories />} />
               <Route path="/categories/:id/instructions" element={<Instructions />} />
               <Route path="/recordings" element={<Recordings />} />
+              <Route path="/audits/new" element={<NewAudit />} />
             </Route>
           </Route>
           <Route element={<AdminRoute />}>

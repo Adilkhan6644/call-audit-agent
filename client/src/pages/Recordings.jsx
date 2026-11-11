@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listRecordings, uploadRecording, validateFileLocally } from '../api/recordings'
 import FileDropzone from '../components/FileDropzone'
+import StatusChip from '../components/StatusChip'
 
 function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
@@ -63,7 +64,7 @@ export default function Recordings() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className={`status-chip ${rec.status === 'uploaded' ? 'pending' : rec.status}`}>{rec.status}</span>
+                <StatusChip status={rec.status === 'uploaded' ? 'pending' : rec.status} />
                 <button onClick={() => navigate(`/audits/new?recordingId=${rec._id}`)}>Run Audit</button>
               </div>
             </div>
