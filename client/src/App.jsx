@@ -7,6 +7,7 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Categories from './pages/Categories'
 import Instructions from './pages/Instructions'
+import Recordings from './pages/Recordings'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/categories/:id/instructions" element={<Instructions />} />
+              <Route path="/recordings" element={<Recordings />} />
             </Route>
           </Route>
           <Route element={<AdminRoute />}>
