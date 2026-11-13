@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { apiFetch, setToken } from './client'
+import { apiFetch, setToken, setRefreshToken } from './client'
 
 describe('apiFetch', () => {
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('apiFetch', () => {
     expect(options.headers.Authorization).toBeUndefined()
   })
 
-  it('clears the stored token on a 401 response', async () => {
+  it('clears the stored token on a 401 response with no refresh token available', async () => {
     setToken('tok123')
     fetch.mockResolvedValue({
       ok: false,
@@ -43,5 +43,40 @@ describe('apiFetch', () => {
     })
     await expect(apiFetch('/categories')).rejects.toThrow()
     expect(localStorage.getItem('access_token')).toBeNull()
+  })
+
+  it('transparently refreshes an expired access token and retries the original request', async () => {
+    setToken('expired-token')
+    setRefreshToken('refresh-token')
+    fetch
+      .mockResolvedValueOnce({ ok: false, status: 401, headers: new Headers(), json: async () => ({}) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ access_token: 'new-token', refresh_token: 'new-refresh' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ items: [] }),
+      })
+
+    const result = await apiFetch('/categories')
+
+    expect(result).toEqual({ items: [] })
+    expect(localStorage.getItem('access_token')).toBe('new-token')
+    expect(fetch.mock.calls[2][1].headers.Authorization).toBe('Bearer new-token')
+  })
+
+  it('logs out when the refresh token itself is rejected', async () => {
+    setToken('expired-token')
+    setRefreshToken('dead-refresh-token')
+    fetch.mockResolvedValue({ ok: false, status: 401, headers: new Headers(), json: async () => ({}) })
+
+    await expect(apiFetch('/categories')).rejects.toThrow()
+    expect(localStorage.getItem('access_token')).toBeNull()
+    expect(localStorage.getItem('refresh_token')).toBeNull()
   })
 })

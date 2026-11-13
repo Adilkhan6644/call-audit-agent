@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getMe, login as apiLogin } from '../api/auth'
-import { getToken, setToken as persistToken } from '../api/client'
+import { getMe, login as apiLogin, logoutRequest } from '../api/auth'
+import { getToken, setToken as persistToken, getRefreshToken, setRefreshToken } from '../api/client'
 
 const AuthContext = createContext(null)
 
@@ -20,15 +20,19 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login(email, password) {
-    const { access_token } = await apiLogin(email, password)
+    const { access_token, refresh_token } = await apiLogin(email, password)
     persistToken(access_token)
+    setRefreshToken(refresh_token)
     const me = await getMe()
     setUser(me)
     return me
   }
 
   function logout() {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) logoutRequest(refreshToken)
     persistToken(null)
+    setRefreshToken(null)
     setUser(null)
   }
 

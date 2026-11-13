@@ -5,3 +5,6 @@ export const register = (email, password) => apiFetch('/auth/register', { method
 export const login = (email, password) => apiFetch('/auth/login', { method: 'POST', body: { email, password } })
 
 export const getMe = () => apiFetch('/auth/me')
+
+export const logoutRequest = (refreshToken) =>
+  apiFetch('/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }).catch(() => {})
