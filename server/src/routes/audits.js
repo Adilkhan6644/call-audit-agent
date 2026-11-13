@@ -1,12 +1,12 @@
 const express = require('express');
 
 const AuditJob = require('../models/auditJob');
-const AuditInstruction = require('../models/auditInstruction');
 const authenticate = require('../middleware/auth');
 const { AppError, NotFoundError, ConflictError } = require('../errors');
 const { getOwnRecording } = require('../services/recordings');
 const { getVisibleCategory } = require('../services/categories');
 const { runAuditPipeline } = require('../services/auditPipeline');
+const { getOrSeedActiveInstruction } = require('../services/auditInstructions');
 const { buildAuditJobsCsv } = require('../services/csvExport');
 const { buildAuditJobsPdf } = require('../services/pdfExport');
 const { auditLimiter } = require('../middleware/rateLimit');
@@ -50,9 +50,9 @@ router.post('/audits', auditLimiter, async (req, res) => {
   }
 
   const recording = await getOwnRecording(recordingId, req.user);
-  await getVisibleCategory(categoryId, req.user);
+  const category = await getVisibleCategory(categoryId, req.user);
 
-  const instruction = await AuditInstruction.findOne({ categoryId, ownerId: req.user._id, isActive: true });
+  const instruction = await getOrSeedActiveInstruction(category, req.user._id);
   if (!instruction) {
     throw new NotFoundError('No active instruction for this category');
   }

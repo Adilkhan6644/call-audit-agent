@@ -4,6 +4,8 @@ const { connectDb, mongoose } = require('../src/db/connection');
 const User = require('../src/models/user');
 const Category = require('../src/models/category');
 const AuditInstruction = require('../src/models/auditInstruction');
+const { ensureBuiltinCategories } = require('../src/services/categories');
+const { DEFAULT_INSTRUCTIONS } = require('../src/services/defaultInstructions');
 
 const TEST_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/call_auditing_test';
 
@@ -53,6 +55,53 @@ describe('audit instruction versioning', () => {
     const active = await request(app).get('/audit-instructions/active').query({ categoryId }).set(headers);
     expect(active.body.version).toBe(2);
     expect(active.body.content).toBe('v2 content');
+  });
+});
+
+describe('built-in category default instruction seeding', () => {
+  it('auto-publishes the default as v1 the first time a user hits it, and a custom category stays 404', async () => {
+    await ensureBuiltinCategories();
+    const headers = await registerAndLogin('seed@example.com');
+    const billing = await Category.findOne({ isBuiltin: true, name: 'Medical Billing' });
+    const custom = await request(app).post('/categories').set(headers).send({ name: 'No Default' });
+
+    const active = await request(app)
+      .get('/audit-instructions/active')
+      .query({ categoryId: billing._id.toString() })
+      .set(headers);
+    expect(active.status).toBe(200);
+    expect(active.body.version).toBe(1);
+    expect(active.body.content).toBe(DEFAULT_INSTRUCTIONS['Medical Billing']);
+
+    const stillNoDefault = await request(app)
+      .get('/audit-instructions/active')
+      .query({ categoryId: custom.body._id })
+      .set(headers);
+    expect(stillNoDefault.status).toBe(404);
+  });
+
+  it('lets the user publish v2 over the auto-seeded default, insert-only', async () => {
+    await ensureBuiltinCategories();
+    const headers = await registerAndLogin('seed-override@example.com');
+    const billing = await Category.findOne({ isBuiltin: true, name: 'Sales Support' });
+
+    const seeded = await request(app)
+      .get('/audit-instructions/active')
+      .query({ categoryId: billing._id.toString() })
+      .set(headers);
+    expect(seeded.body.version).toBe(1);
+
+    const v2 = await request(app)
+      .post('/audit-instructions')
+      .set(headers)
+      .send({ categoryId: billing._id.toString(), content: 'my own rubric' });
+    expect(v2.body.version).toBe(2);
+
+    const list = await request(app)
+      .get('/audit-instructions')
+      .query({ categoryId: billing._id.toString() })
+      .set(headers);
+    expect(list.body.map((i) => i.version)).toEqual([1, 2]);
   });
 });
 

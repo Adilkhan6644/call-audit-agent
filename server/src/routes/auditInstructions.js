@@ -4,7 +4,7 @@ const AuditInstruction = require('../models/auditInstruction');
 const authenticate = require('../middleware/auth');
 const { NotFoundError } = require('../errors');
 const { getVisibleCategory } = require('../services/categories');
-const { createNewVersion } = require('../services/auditInstructions');
+const { createNewVersion, getOrSeedActiveInstruction } = require('../services/auditInstructions');
 
 const router = express.Router();
 router.use(authenticate);
@@ -76,12 +76,8 @@ router.get('/audit-instructions', async (req, res) => {
  *       404: { description: No active instruction for this category }
  */
 router.get('/audit-instructions/active', async (req, res) => {
-  await getVisibleCategory(req.query.categoryId, req.user);
-  const instruction = await AuditInstruction.findOne({
-    categoryId: req.query.categoryId,
-    ownerId: req.user._id,
-    isActive: true,
-  });
+  const category = await getVisibleCategory(req.query.categoryId, req.user);
+  const instruction = await getOrSeedActiveInstruction(category, req.user._id);
   if (!instruction) {
     throw new NotFoundError('No active instruction for this category');
   }
