@@ -3,11 +3,12 @@ import Icon from './icons'
 
 const SPHERE = { x: 12, y: 50 }
 const TILE_X = 29
-// The right-hand fan must start where the selected tile actually ends, or
-// the two fans (sphere→tile, tile→rows) draw with a dead gap between them.
 // Tile width is a px clamp(130–170px), not a %, so this is an estimate of
-// its right edge on a typical stage width rather than a measured value.
-const FAN_ORIGIN = { x: TILE_X + 13, y: 50 }
+// half its width on a typical stage, not a measured value. Both fans meet
+// here — the box's horizontal center — instead of at its left edge, so the
+// lines read as passing through the tile rather than stopping short of it.
+const TILE_CENTER_X = TILE_X + 6
+const FAN_ORIGIN = { x: TILE_CENTER_X, y: 50 }
 const CURVE_END_X = 53 // == ROW_TEXT_X, so the line runs straight into the dot instead of stopping short of it
 const ROW_TEXT_X = 53
 const ROWS_Y = [6, 94]
@@ -192,7 +193,7 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
         {tiles.map((cat, i) => (
           <AnimatedLink
             key={cat._id}
-            d={curvePath(SPHERE.x, SPHERE.y, TILE_X, tileY(i))}
+            d={curvePath(SPHERE.x, SPHERE.y, TILE_CENTER_X, tileY(i))}
             delay={i * 60}
           />
         ))}
