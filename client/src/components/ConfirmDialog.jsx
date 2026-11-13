@@ -10,8 +10,8 @@ export default function ConfirmDialog({ message, onConfirm, onCancel }) {
         <div className="label" style={{ marginBottom: 10 }}>CONFIRM ACTION</div>
         <p>{message}</p>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-          <button onClick={onCancel}>Cancel</button>
-          <button onClick={onConfirm} style={{ color: 'var(--danger)' }}>Confirm</button>
+          <button className="ghost-button" onClick={onCancel}>Cancel</button>
+          <button className="button-danger" onClick={onConfirm}>Confirm</button>
         </div>
       </div>
     </div>

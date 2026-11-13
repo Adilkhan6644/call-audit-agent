@@ -21,7 +21,7 @@ export default function FileDropzone({ onFile, accept }) {
       style={{
         textAlign: 'center',
         cursor: 'pointer',
-        borderColor: dragOver ? 'var(--accent)' : 'var(--border)',
+        borderColor: dragOver ? 'var(--cyan)' : 'var(--border)',
         borderStyle: 'dashed',
       }}
     >

@@ -43,7 +43,7 @@ export default function AdminApiKeys() {
                   {k.updatedAt && ` · updated ${new Date(k.updatedAt).toLocaleString()}`}
                 </div>
               </div>
-              <button onClick={() => setRotating(rotating === k.provider ? null : k.provider)}>
+              <button className="ghost-button" onClick={() => setRotating(rotating === k.provider ? null : k.provider)}>
                 Rotate Key
               </button>
             </div>

@@ -31,7 +31,7 @@ export default function AskAgentBar() {
         style={{ flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none' }}
       />
       {notice && <span style={{ color: '#cfe3f5', fontSize: 12 }}>{notice}</span>}
-      <button type="submit" style={{ background: 'var(--purple)' }}>Ask</button>
+      <button type="submit" style={{ background: 'var(--purple)', color: '#fff' }}>Ask</button>
     </form>
   )
 }

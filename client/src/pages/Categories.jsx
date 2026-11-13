@@ -65,7 +65,7 @@ export default function Categories() {
                 {cat.name}
               </Link>
               {!cat.isBuiltin && (
-                <button onClick={() => setPendingDelete(cat)} style={{ color: 'var(--danger)' }}>
+                <button className="ghost-button" onClick={() => setPendingDelete(cat)} style={{ color: 'var(--danger)' }}>
                   Delete
                 </button>
               )}

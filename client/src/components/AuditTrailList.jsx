@@ -12,7 +12,7 @@ export default function AuditTrailList({ entries, renderLabel, activeId }) {
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             justifyContent: 'space-between',
-            color: entry._id === activeId ? 'var(--accent)' : 'var(--text)',
+            color: entry._id === activeId ? 'var(--cyan)' : 'var(--text)',
           }}
         >
           <span>{renderLabel(entry)}</span>

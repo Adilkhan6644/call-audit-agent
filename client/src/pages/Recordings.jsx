@@ -65,7 +65,7 @@ export default function Recordings() {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <StatusChip status={rec.status === 'uploaded' ? 'pending' : rec.status} />
-                <button onClick={() => navigate(`/audits/new?recordingId=${rec._id}`)}>Run Audit</button>
+                <button className="ghost-button" onClick={() => navigate(`/audits/new?recordingId=${rec._id}`)}>Run Audit</button>
               </div>
             </div>
           ))}

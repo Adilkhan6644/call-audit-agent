@@ -50,8 +50,8 @@ export default function AuditHistory() {
           ))}
         </select>
         <div style={{ flex: 1 }} />
-        <button onClick={() => downloadFile('/audits/export.csv', 'audits.csv')}>Export CSV</button>
-        <button onClick={() => downloadFile('/audits/export.pdf', 'audits.pdf')}>Export PDF</button>
+        <button className="ghost-button" onClick={() => downloadFile('/audits/export.csv', 'audits.csv')}>Export CSV</button>
+        <button className="ghost-button" onClick={() => downloadFile('/audits/export.pdf', 'audits.pdf')}>Export PDF</button>
       </div>
 
       {data.items.length === 0 ? (
@@ -59,7 +59,7 @@ export default function AuditHistory() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.items.map((job) => (
-            <Link key={job._id} to={`/audits/${job._id}`} className="panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textDecoration: 'none' }}>
+            <Link key={job._id} to={`/audits/${job._id}`} className="panel is-interactive" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div>{categoryName(job.categoryId)}</div>
                 <div className="label">{new Date(job.createdAt).toLocaleString()}</div>
@@ -74,9 +74,9 @@ export default function AuditHistory() {
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
-        <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
+        <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
         <span className="label">Page {data.page} of {totalPages}</span>
-        <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
+        <button className="ghost-button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
       </div>
     </div>
   )

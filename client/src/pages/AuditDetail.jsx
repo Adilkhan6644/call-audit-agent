@@ -48,8 +48,8 @@ export default function AuditDetail() {
           <p>{job.result.summary}</p>
           <FindingsList findings={job.result.findings} />
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <button onClick={() => downloadFile(`/audits/export.csv`, `audit-${job._id}.csv`)}>Export CSV</button>
-            <button onClick={() => downloadFile(`/audits/export.pdf`, `audit-${job._id}.pdf`)}>Export PDF</button>
+            <button className="ghost-button" onClick={() => downloadFile(`/audits/export.csv`, `audit-${job._id}.csv`)}>Export CSV</button>
+            <button className="ghost-button" onClick={() => downloadFile(`/audits/export.pdf`, `audit-${job._id}.pdf`)}>Export PDF</button>
           </div>
         </div>
       )}
