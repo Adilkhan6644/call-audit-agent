@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Icon from './icons'
 
-const SPHERE = { x: 12, y: 50 }
+const HUB_Y = 46
+const SPHERE = { x: 12, y: HUB_Y }
 const TILE_X = 29
-const FALLBACK_TILE_WIDTH_PCT = 13
 const CURVE_END_X = 53
 const ROW_TEXT_X = 53
 const ROWS_Y = [6, 94]
@@ -78,21 +78,36 @@ function AnimatedLink({ d, color = GOLD, delay = 0 }) {
   )
 }
 
+function sameRects(a, b) {
+  const aKeys = Object.keys(a)
+  const bKeys = Object.keys(b)
+  if (aKeys.length !== bKeys.length) return false
+  return aKeys.every((key) => b[key] && b[key].left === a[key].left && b[key].right === a[key].right && b[key].y === a[key].y)
+}
+
 export default function CategoryAuditGraph({ categories, audits, onSelect }) {
   const [selectedId, setSelectedId] = useState(null)
   const stageRef = useRef(null)
-  const tileRef = useRef(null)
-  const [tileWidthPct, setTileWidthPct] = useState(FALLBACK_TILE_WIDTH_PCT)
+  const boxEls = useRef(new Map())
+  const [boxRects, setBoxRects] = useState({})
 
   useLayoutEffect(() => {
     const stageEl = stageRef.current
-    const tileEl = tileRef.current
-    if (!stageEl || !tileEl) return undefined
+    if (!stageEl) return undefined
 
     function measure() {
-      const stageWidth = stageEl.getBoundingClientRect().width
-      const tileWidth = tileEl.getBoundingClientRect().width
-      if (stageWidth > 0) setTileWidthPct((tileWidth / stageWidth) * 100)
+      const stageWidth = stageEl.offsetWidth
+      const stageHeight = stageEl.offsetHeight
+      if (stageWidth === 0 || stageHeight === 0) return
+      const next = {}
+      boxEls.current.forEach((el, id) => {
+        next[id] = {
+          left: Math.round((el.offsetLeft / stageWidth) * 10000) / 100,
+          right: Math.round(((el.offsetLeft + el.offsetWidth) / stageWidth) * 10000) / 100,
+          y: Math.round(((el.offsetTop + el.offsetHeight / 2) / stageHeight) * 10000) / 100,
+        }
+      })
+      setBoxRects((prev) => (sameRects(prev, next) ? prev : next))
     }
 
     measure()
@@ -132,12 +147,13 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
   const middleIndex = Math.floor(shown.length / 2)
   tiles.splice(middleIndex, 0, selected)
   const tileGap = 9
-  const tileY = (i) => 50 + (i - middleIndex) * tileGap
+  const tileY = (i) => HUB_Y + (i - middleIndex) * tileGap
 
   const rows = audits.filter((a) => a.categoryId === selected._id)
   const rowGap = rows.length > 1 ? (ROWS_Y[1] - ROWS_Y[0]) / (rows.length - 1) : 0
   const rowY = (i) => (rows.length > 1 ? ROWS_Y[0] + i * rowGap : 50)
-  const fanOriginX = TILE_X + tileWidthPct
+  const selectedRect = boxRects[selected._id]
+  const fanOrigin = { x: selectedRect ? selectedRect.right : TILE_X, y: selectedRect ? selectedRect.y : HUB_Y }
 
   function pick(kind, node) {
     if (kind === 'category') setSelectedId(node._id)
@@ -189,20 +205,24 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
             />
           </linearGradient>
         </defs>
-        {tiles.map((cat, i) => (
-          <AnimatedLink
-            key={cat._id}
-            d={curvePath(SPHERE.x, SPHERE.y, TILE_X, tileY(i))}
-            delay={i * 60}
-          />
-        ))}
-        {rows.map((a, i) => (
-          <AnimatedLink
-            key={a._id}
-            d={curvePath(fanOriginX, 50, CURVE_END_X, rowY(i))}
-            delay={150 + i * 40}
-          />
-        ))}
+        {tiles.map((cat, i) => {
+          const rect = boxRects[cat._id]
+          const endX = rect ? rect.left : TILE_X
+          const endY = rect ? rect.y : tileY(i)
+          return <AnimatedLink key={cat._id} d={curvePath(SPHERE.x, SPHERE.y, endX, endY)} delay={i * 60} />
+        })}
+        {rows.map((a, i) => {
+          const rect = boxRects[a._id]
+          const endX = rect ? rect.left : CURVE_END_X
+          const endY = rect ? rect.y : rowY(i)
+          return (
+            <AnimatedLink
+              key={a._id}
+              d={curvePath(fanOrigin.x, fanOrigin.y, endX, endY)}
+              delay={150 + i * 40}
+            />
+          )
+        })}
       </svg>
 
       {tiles.map((cat, i) => {
@@ -211,7 +231,10 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
         return (
           <button
             key={cat._id}
-            ref={i === 0 ? tileRef : null}
+            ref={(el) => {
+              if (el) boxEls.current.set(cat._id, el)
+              else boxEls.current.delete(cat._id)
+            }}
             title={cat.name}
             className={`graph-category-tile${isSelected ? ' is-selected' : ''}`}
             onClick={() => pick('category', cat)}
@@ -239,6 +262,10 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
         return (
           <button
             key={a._id}
+            ref={(el) => {
+              if (el) boxEls.current.set(a._id, el)
+              else boxEls.current.delete(a._id)
+            }}
             title={title}
             className="graph-row"
             onClick={() => pick('audit', a)}
