@@ -1,15 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Icon from './icons'
 
 const SPHERE = { x: 12, y: 50 }
 const TILE_X = 29
-// Tile width is a px clamp(130–170px), not a %, so this is an estimate of
-// half its width on a typical stage, not a measured value. Both fans meet
-// here — the box's horizontal center — instead of at its left edge, so the
-// lines read as passing through the tile rather than stopping short of it.
-const TILE_CENTER_X = TILE_X + 6
-const FAN_ORIGIN = { x: TILE_CENTER_X, y: 50 }
-const CURVE_END_X = 53 // == ROW_TEXT_X, so the line runs straight into the dot instead of stopping short of it
+const FALLBACK_TILE_WIDTH_PCT = 13
+const CURVE_END_X = 53
 const ROW_TEXT_X = 53
 const ROWS_Y = [6, 94]
 const TILE_ICONS = ['folder', 'chart', 'shield', 'mic', 'play']
@@ -27,14 +22,6 @@ function curvePath(x0, y0, x1, y1) {
   return `M ${x0} ${y0} C ${midX} ${y0}, ${midX} ${y1}, ${x1} ${y1}`
 }
 
-/**
- * Draws the path in (stroke-dashoffset: length → 0, ease-out-expo — the
- * standard "self-drawing SVG line" technique), then once fully revealed
- * overlays a second copy stroked with the shared `goldShine` gradient
- * (see its <animateTransform> in the <defs> below) so a soft highlight
- * glides along the line — a smooth, continuous "light passing through
- * the line" effect instead of a dashed marching-ants pattern.
- */
 function AnimatedLink({ d, color = GOLD, delay = 0 }) {
   const ref = useRef(null)
   const [flowing, setFlowing] = useState(false)
@@ -91,14 +78,29 @@ function AnimatedLink({ d, color = GOLD, delay = 0 }) {
   )
 }
 
-/**
- * Left: category tiles fed by curved lines from a glowing central sphere.
- * The selected tile's line continues into a wide fan of its audits on the
- * right, each row ending in a small marker dot on the curve — matching the
- * reference screenshot's radial hub layout.
- */
 export default function CategoryAuditGraph({ categories, audits, onSelect }) {
   const [selectedId, setSelectedId] = useState(null)
+  const stageRef = useRef(null)
+  const tileRef = useRef(null)
+  const [tileWidthPct, setTileWidthPct] = useState(FALLBACK_TILE_WIDTH_PCT)
+
+  useLayoutEffect(() => {
+    const stageEl = stageRef.current
+    const tileEl = tileRef.current
+    if (!stageEl || !tileEl) return undefined
+
+    function measure() {
+      const stageWidth = stageEl.getBoundingClientRect().width
+      const tileWidth = tileEl.getBoundingClientRect().width
+      if (stageWidth > 0) setTileWidthPct((tileWidth / stageWidth) * 100)
+    }
+
+    measure()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(measure)
+    observer.observe(stageEl)
+    return () => observer.disconnect()
+  })
 
   const categoryStats = useMemo(() => {
     const stats = {}
@@ -135,6 +137,7 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
   const rows = audits.filter((a) => a.categoryId === selected._id)
   const rowGap = rows.length > 1 ? (ROWS_Y[1] - ROWS_Y[0]) / (rows.length - 1) : 0
   const rowY = (i) => (rows.length > 1 ? ROWS_Y[0] + i * rowGap : 50)
+  const fanOriginX = TILE_X + tileWidthPct
 
   function pick(kind, node) {
     if (kind === 'category') setSelectedId(node._id)
@@ -142,7 +145,7 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
   }
 
   return (
-    <div className="graph-stage graph-stage--fullbleed">
+    <div className="graph-stage graph-stage--fullbleed" ref={stageRef}>
       <div className="graph-sphere-halo" style={{ left: `${SPHERE.x}%`, top: `${SPHERE.y}%` }} />
       <div className="graph-sphere-label" style={{ left: `${SPHERE.x}%`, top: `${SPHERE.y}%` }}>
         {selected.name}
@@ -170,10 +173,6 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
 
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="graph-svg">
         <defs>
-          {/* objectBoundingBox (the default) normalizes to each stroked path's
-             own 0–1 box, so one definition sweeps every line independently —
-             the <animateTransform> slides the bright band from off the
-             start to off the end once per cycle. */}
           <linearGradient id="goldShine" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#fff6de" stopOpacity="0" />
             <stop offset="45%" stopColor="#fff6de" stopOpacity="0" />
@@ -193,14 +192,14 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
         {tiles.map((cat, i) => (
           <AnimatedLink
             key={cat._id}
-            d={curvePath(SPHERE.x, SPHERE.y, TILE_CENTER_X, tileY(i))}
+            d={curvePath(SPHERE.x, SPHERE.y, TILE_X, tileY(i))}
             delay={i * 60}
           />
         ))}
         {rows.map((a, i) => (
           <AnimatedLink
             key={a._id}
-            d={curvePath(FAN_ORIGIN.x, FAN_ORIGIN.y, CURVE_END_X, rowY(i))}
+            d={curvePath(fanOriginX, 50, CURVE_END_X, rowY(i))}
             delay={150 + i * 40}
           />
         ))}
@@ -212,6 +211,7 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
         return (
           <button
             key={cat._id}
+            ref={i === 0 ? tileRef : null}
             title={cat.name}
             className={`graph-category-tile${isSelected ? ' is-selected' : ''}`}
             onClick={() => pick('category', cat)}
