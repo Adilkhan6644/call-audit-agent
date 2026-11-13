@@ -9,6 +9,12 @@ import Categories from './pages/Categories'
 import Instructions from './pages/Instructions'
 import Recordings from './pages/Recordings'
 import NewAudit from './pages/NewAudit'
+import AuditHistory from './pages/AuditHistory'
+import AuditDetail from './pages/AuditDetail'
+import Usage from './pages/Usage'
+import Admin from './pages/Admin'
+import AdminApiKeys from './pages/AdminApiKeys'
+import AdminAlerts from './pages/AdminAlerts'
 
 export default function App() {
   return (
@@ -24,10 +30,17 @@ export default function App() {
               <Route path="/categories/:id/instructions" element={<Instructions />} />
               <Route path="/recordings" element={<Recordings />} />
               <Route path="/audits/new" element={<NewAudit />} />
+              <Route path="/audits" element={<AuditHistory />} />
+              <Route path="/audits/:id" element={<AuditDetail />} />
+              <Route path="/usage" element={<Usage />} />
             </Route>
           </Route>
           <Route element={<AdminRoute />}>
-            <Route element={<Shell />}>{/* admin pages added in a later phase */}</Route>
+            <Route element={<Shell />}>
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/api-keys" element={<AdminApiKeys />} />
+              <Route path="/admin/alerts" element={<AdminAlerts />} />
+            </Route>
           </Route>
         </Routes>
       </BrowserRouter>

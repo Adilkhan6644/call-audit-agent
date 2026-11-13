@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/categories', icon: 'folder', label: 'Categories' },
   { to: '/recordings', icon: 'mic', label: 'Recordings' },
   { to: '/audits/new', icon: 'play', label: 'Run Audit' },
+  { to: '/audits', icon: 'layers', label: 'Audit History' },
   { to: '/usage', icon: 'chart', label: 'Usage' },
 ]
 const ADMIN_ITEMS = [{ to: '/admin', icon: 'shield', label: 'Admin' }]
