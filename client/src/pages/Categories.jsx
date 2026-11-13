@@ -51,7 +51,7 @@ export default function Categories() {
           onChange={(e) => setNewName(e.target.value)}
           style={{ flex: 1 }}
         />
-        <button type="submit">Add</button>
+        <button type="submit" disabled={!newName.trim()}>Add</button>
       </form>
 
       {categories.length === 0 ? (
