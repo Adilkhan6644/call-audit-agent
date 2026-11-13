@@ -183,14 +183,6 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
    the viewBox's 0-100 space maps against the wrong pixel box entirely. */
 .graph-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
 
-.graph-link-flow {
-  stroke-dasharray: 5 6;
-  animation: graph-flow 1.1s linear infinite;
-}
-@keyframes graph-flow {
-  to { stroke-dashoffset: -22; }
-}
-
 .graph-node {
   position: absolute;
   display: flex;
@@ -205,7 +197,6 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .graph-link-flow,
   .graph-node,
   .graph-node-ring,
   .graph-node-sphere,
@@ -214,6 +205,9 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   .side-card-enter {
     animation: none !important;
     transition: none !important;
+  }
+  .graph-shine {
+    display: none;
   }
 }
 

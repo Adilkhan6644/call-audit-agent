@@ -3,11 +3,16 @@ import Icon from './icons'
 
 const SPHERE = { x: 12, y: 50 }
 const TILE_X = 29
-const FAN_ORIGIN = { x: 50, y: 50 }
-const CURVE_END_X = 51
+// The right-hand fan must start where the selected tile actually ends, or
+// the two fans (sphere→tile, tile→rows) draw with a dead gap between them.
+// Tile width is a px clamp(130–170px), not a %, so this is an estimate of
+// its right edge on a typical stage width rather than a measured value.
+const FAN_ORIGIN = { x: TILE_X + 13, y: 50 }
+const CURVE_END_X = 53 // == ROW_TEXT_X, so the line runs straight into the dot instead of stopping short of it
 const ROW_TEXT_X = 53
 const ROWS_Y = [6, 94]
 const TILE_ICONS = ['folder', 'chart', 'shield', 'mic', 'play']
+const GOLD = '#e0b869'
 
 function scoreColor(score) {
   if (score == null) return '#94a3b8'
@@ -23,10 +28,13 @@ function curvePath(x0, y0, x1, y1) {
 
 /**
  * Draws the path in (stroke-dashoffset: length → 0, ease-out-expo — the
- * standard "self-drawing SVG line" technique) then hands off to the
- * continuous marching-ants flow animation once it's fully revealed.
+ * standard "self-drawing SVG line" technique), then once fully revealed
+ * overlays a second copy stroked with the shared `goldShine` gradient
+ * (see its <animateTransform> in the <defs> below) so a soft highlight
+ * glides along the line — a smooth, continuous "light passing through
+ * the line" effect instead of a dashed marching-ants pattern.
  */
-function AnimatedLink({ d, color, delay = 0 }) {
+function AnimatedLink({ d, color = GOLD, delay = 0 }) {
   const ref = useRef(null)
   const [flowing, setFlowing] = useState(false)
 
@@ -57,16 +65,28 @@ function AnimatedLink({ d, color, delay = 0 }) {
   }, [d, delay])
 
   return (
-    <path
-      ref={ref}
-      d={d}
-      fill="none"
-      stroke={color}
-      strokeWidth={1}
-      opacity={0.6}
-      vectorEffect="non-scaling-stroke"
-      className={flowing ? 'graph-link-flow' : ''}
-    />
+    <>
+      <path
+        ref={ref}
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={1}
+        opacity={0.75}
+        vectorEffect="non-scaling-stroke"
+      />
+      {flowing && (
+        <path
+          d={d}
+          className="graph-shine"
+          fill="none"
+          stroke="url(#goldShine)"
+          strokeWidth={2.2}
+          vectorEffect="non-scaling-stroke"
+          style={{ mixBlendMode: 'screen' }}
+        />
+      )}
+    </>
   )
 }
 
@@ -148,11 +168,31 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
       </div>
 
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="graph-svg">
+        <defs>
+          {/* objectBoundingBox (the default) normalizes to each stroked path's
+             own 0–1 box, so one definition sweeps every line independently —
+             the <animateTransform> slides the bright band from off the
+             start to off the end once per cycle. */}
+          <linearGradient id="goldShine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#fff6de" stopOpacity="0" />
+            <stop offset="45%" stopColor="#fff6de" stopOpacity="0" />
+            <stop offset="50%" stopColor="#fff6de" stopOpacity="0.95" />
+            <stop offset="55%" stopColor="#fff6de" stopOpacity="0" />
+            <stop offset="100%" stopColor="#fff6de" stopOpacity="0" />
+            <animateTransform
+              attributeName="gradientTransform"
+              type="translate"
+              from="-1.5 0"
+              to="1.5 0"
+              dur="2.4s"
+              repeatCount="indefinite"
+            />
+          </linearGradient>
+        </defs>
         {tiles.map((cat, i) => (
           <AnimatedLink
             key={cat._id}
             d={curvePath(SPHERE.x, SPHERE.y, TILE_X, tileY(i))}
-            color={cat._id === selected._id ? '#f2c14e' : '#3fa9c9'}
             delay={i * 60}
           />
         ))}
@@ -160,7 +200,6 @@ export default function CategoryAuditGraph({ categories, audits, onSelect }) {
           <AnimatedLink
             key={a._id}
             d={curvePath(FAN_ORIGIN.x, FAN_ORIGIN.y, CURVE_END_X, rowY(i))}
-            color={scoreColor(a.result?.score)}
             delay={150 + i * 40}
           />
         ))}
