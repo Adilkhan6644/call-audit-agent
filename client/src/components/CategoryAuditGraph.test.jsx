@@ -44,16 +44,25 @@ describe('CategoryAuditGraph', () => {
     const audits = [{ _id: 'a1', categoryId: 'c1', status: 'completed', result: { score: 92 } }]
     const { container } = render(<CategoryAuditGraph categories={categories} audits={audits} />)
 
-    const lineDs = Array.from(container.querySelectorAll('.graph-svg path')).map((p) => p.getAttribute('d'))
-    const sphereLineD = lineDs.find((d) => d.includes('M 12 '))
-    const rowLineD = lineDs.find((d) => !d.includes('M 12 '))
+    // Each link renders a base path plus (once drawn in) a duplicate shine
+    // path with the same d — exclude the shine so indices line up 1:1 with
+    // links. Tile line is drawn before the row line in document order.
+    const [sphereLineD, rowLineD] = Array.from(container.querySelectorAll('.graph-svg path:not(.graph-shine)')).map(
+      (p) => p.getAttribute('d')
+    )
 
     restore()
 
+    // Lines are built in real stage pixels (stage is 1000x600 here). The tile
+    // is already vertically centered on offsetTop via its own CSS
+    // translateY(-50%), so the line's y is offsetTop itself (270), not
+    // offsetTop + height/2 (which would land on the box's bottom edge
+    // instead of its middle). Incoming line ends at the left edge (300);
+    // outgoing fan starts at the right edge (500).
     const sphereLineEnd = sphereLineD.trim().split(/\s+/).slice(-2).join(' ')
     const rowLineStart = rowLineD.trim().split(/\s+/).slice(1, 3).join(' ')
-    expect(sphereLineEnd).toBe('30 50')
-    expect(rowLineStart).toBe('50 50')
+    expect(sphereLineEnd).toBe('300 270')
+    expect(rowLineStart).toBe('500 270')
   })
 
   it('ends the fan line at the audit row\'s real measured left edge too', () => {
@@ -67,13 +76,16 @@ describe('CategoryAuditGraph', () => {
     const audits = [{ _id: 'a1', categoryId: 'c1', status: 'completed', result: { score: 92 } }]
     const { container } = render(<CategoryAuditGraph categories={categories} audits={audits} />)
 
-    const lineDs = Array.from(container.querySelectorAll('.graph-svg path')).map((p) => p.getAttribute('d'))
-    const rowLineD = lineDs.find((d) => !d.includes('M 12 '))
+    const [, rowLineD] = Array.from(container.querySelectorAll('.graph-svg path:not(.graph-shine)')).map((p) =>
+      p.getAttribute('d')
+    )
 
     restore()
 
+    // Row left edge: 700; y is offsetTop itself (54) — the row is already
+    // centered on it via translateY(-50%).
     const rowLineEnd = rowLineD.trim().split(/\s+/).slice(-2).join(' ')
-    expect(rowLineEnd).toBe('70 11.5')
+    expect(rowLineEnd).toBe('700 54')
   })
 
   it('does not use a stale shrunk-by-transform rect while the entrance animation is still running', () => {
@@ -91,13 +103,13 @@ describe('CategoryAuditGraph', () => {
     const audits = [{ _id: 'a1', categoryId: 'c1', status: 'completed', result: { score: 92 } }]
     const { container } = render(<CategoryAuditGraph categories={categories} audits={audits} />)
 
-    const sphereLineD = Array.from(container.querySelectorAll('.graph-svg path'))
-      .map((p) => p.getAttribute('d'))
-      .find((d) => d.includes('M 12 '))
+    const [sphereLineD] = Array.from(container.querySelectorAll('.graph-svg path:not(.graph-shine)')).map((p) =>
+      p.getAttribute('d')
+    )
 
     HTMLElement.prototype.getBoundingClientRect = originalRect
     restore()
 
-    expect(sphereLineD.trim().split(/\s+/).slice(-2).join(' ')).toBe('30 50')
+    expect(sphereLineD.trim().split(/\s+/).slice(-2).join(' ')).toBe('300 270')
   })
 })

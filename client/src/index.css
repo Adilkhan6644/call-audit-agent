@@ -189,24 +189,122 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  animation: graph-node-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: graph-hub-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) 3.05s both;
 }
-@keyframes graph-node-enter {
-  from { opacity: 0; transform: scale(0.15); }
+@keyframes graph-hub-enter {
+  0% { opacity: 0; transform: scale(0.85); }
+  65% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes graph-halo-enter {
+  from { opacity: 0; transform: scale(0.35); }
   to { opacity: 1; transform: scale(1); }
+}
+@keyframes graph-label-enter {
+  from { opacity: 0; transform: translate(-50%, -90%); }
+  to { opacity: 1; transform: translate(-50%, -100%); }
+}
+@keyframes graph-pill-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* The purple hub "orb" that expands from its resting spot to fill the graph
+   section, then collapses back — see graph-orb-overlay in the component.
+   Positioned like the real hub (% of .graph-stage) and clipped by the
+   stage's own overflow:hidden, so it never spills past the graph section. */
+.graph-orb-overlay {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #8a7af2 45%, #4e3fb8 100%);
+  box-shadow: 0 0 60px 20px rgba(138,122,242,0.55), 0 0 200px 80px rgba(138,122,242,0.35);
+  z-index: 50;
+  pointer-events: none;
+  animation: graph-orb-intro 3.2s linear both;
+}
+/* `linear` is deliberate: applying one easing curve across many unevenly-
+   spaced stops makes the browser ease in and out of *every* stop instead of
+   once for the whole motion — it decelerates to near-zero speed at each one
+   and re-accelerates, which read as repeated stutter/glitching. Pacing is
+   controlled entirely by stop spacing vs. scale delta instead: big scale
+   jumps over few % = fast expand, small jumps spread over many % = a smooth,
+   slow return — with no per-stop easing to fight against. */
+@keyframes graph-orb-intro {
+  0% { transform: translate(-50%, -50%) scale(0.08); opacity: 0.8; }
+  3% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.95; }
+  8% { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  16% { transform: translate(-50%, -50%) scale(6); opacity: 1; }
+  24% { transform: translate(-50%, -50%) scale(22); opacity: 1; }
+  36% { transform: translate(-50%, -50%) scale(22); opacity: 1; }
+  48% { transform: translate(-50%, -50%) scale(15); opacity: 1; }
+  58% { transform: translate(-50%, -50%) scale(10); opacity: 1; }
+  68% { transform: translate(-50%, -50%) scale(6.5); opacity: 1; }
+  77% { transform: translate(-50%, -50%) scale(4); opacity: 1; }
+  85% { transform: translate(-50%, -50%) scale(2.3); opacity: 1; }
+  91% { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  96% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0; }
+}
+/* Same visual language as the hub orb: arrive oversized, then shrink down
+   into the final slot with a small settling bounce — not a slide-in. */
+@keyframes graph-card-arrive {
+  0% { opacity: 0; transform: translateY(-50%) scale(2.6); }
+  15% { opacity: 1; transform: translateY(-50%) scale(2.2); }
+  65% { opacity: 1; transform: translateY(-50%) scale(0.88); }
+  85% { transform: translateY(-50%) scale(1.06); }
+  100% { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+@keyframes graph-select-glow {
+  0% {
+    border-color: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 0 18px rgba(224,184,105,0.12), 0 0 2px rgba(224,184,105,0.25);
+  }
+  55% {
+    border-color: #f7cf6e;
+    background: rgba(242,193,78,0.2);
+    box-shadow: 0 0 48px rgba(242,193,78,0.75), 0 0 74px rgba(242,193,78,0.3), 0 0 6px rgba(255,236,180,0.9);
+  }
+  100% {
+    border-color: #f2c14e;
+    background: rgba(242,193,78,0.14);
+    box-shadow: 0 0 34px rgba(242,193,78,0.5), 0 0 60px rgba(242,193,78,0.22), 0 0 4px rgba(255,236,180,0.7);
+  }
+}
+@keyframes graph-row-reveal {
+  0% { opacity: 0; transform: translateY(calc(-50% + 8px)); }
+  100% { opacity: 1; transform: translateY(-50%); }
+}
+.graph-row-reveal { animation: graph-row-reveal 0.38s ease-out both; }
+
+/* The traveling spark riding each drawn-in line (see <animateMotion> on the
+   <circle> in AnimatedLink) — a bright gold dot, not the wider shine band.
+   The SVG viewBox is real stage pixels now, so this needs an absolute size
+   generous enough to read at a glance, not a viewBox-relative sliver. */
+.graph-spark {
+  fill: #fff8e4;
+  filter: drop-shadow(0 0 3px #fff8e4) drop-shadow(0 0 10px #ffce72) drop-shadow(0 0 16px #e0b869);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .graph-node,
   .graph-node-ring,
   .graph-node-sphere,
+  .graph-sphere-halo,
+  .graph-sphere-label,
+  .gap-pill,
   .graph-category-tile,
   .graph-row,
+  .graph-row-reveal,
   .side-card-enter {
     animation: none !important;
     transition: none !important;
   }
-  .graph-shine {
+  .graph-shine,
+  .graph-spark,
+  .graph-orb-overlay {
     display: none;
   }
 }
@@ -232,7 +330,7 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   justify-content: center;
   text-align: center;
   font-weight: 700;
-  animation: graph-pulse 2.4s ease-in-out infinite;
+  animation: graph-pulse 2.4s ease-in-out 0.55s infinite;
 }
 @keyframes graph-pulse {
   0%, 100% { filter: brightness(1); }
@@ -534,6 +632,7 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   border-radius: 50%;
   background: radial-gradient(circle, rgba(138,122,242,0.18) 0%, rgba(22,50,74,0.08) 55%, transparent 75%);
   pointer-events: none;
+  animation: graph-halo-enter 0.9s ease-out 2.95s both;
 }
 .graph-sphere-label {
   position: absolute;
@@ -546,6 +645,7 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   font-size: 13px;
   line-height: 1.3;
   text-align: center;
+  animation: graph-label-enter 0.5s ease-out 3.15s both;
 }
 .gap-pill {
   position: absolute;
@@ -558,6 +658,7 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   padding: 3px 10px;
   border-radius: 999px;
   white-space: nowrap;
+  animation: graph-pill-enter 0.5s ease-out 3.2s both;
 }
 
 .graph-category-tile {
@@ -574,7 +675,6 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   border-radius: 8px;
   text-align: left;
   font-size: 12px;
-  animation: graph-node-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   box-shadow: 0 0 18px rgba(224,184,105,0.12), 0 0 2px rgba(224,184,105,0.25);
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
 }
@@ -605,11 +705,104 @@ a.panel:hover, .panel.is-interactive:hover { border-color: rgba(47,191,223,0.35)
   font-size: 11px;
   white-space: nowrap;
   max-width: 260px;
-  animation: graph-node-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: graph-row-reveal 0.38s ease-out both;
 }
 .graph-row:hover .graph-row-title { color: #fff; }
 .graph-row-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .graph-row > span { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 .graph-row-title { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
 .graph-row-meta { font-size: 9px; color: #6f94b2; letter-spacing: 0.04em; }
+
+/* --- Ask bar: glassy chat-composer look --- */
+.ask-bar-wrap { position: relative; }
+.ask-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(18, 42, 64, 0.55);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 12px 14px 10px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.ask-bar-input {
+  background: transparent;
+  border: none;
+  padding: 4px 4px 10px;
+  font-size: 14px;
+  color: #eef5fb;
+}
+.ask-bar-input:focus { outline: none; box-shadow: none; }
+.ask-bar-toolbar { display: flex; align-items: center; gap: 6px; }
+.ask-bar-notice { font-size: 11px; color: #9fd8c7; }
+.ask-bar-icon-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  color: #a9c3d8;
+  border: 1px solid transparent;
+}
+.ask-bar-icon-btn:hover { background: rgba(255,255,255,0.12); color: #e7f1fb; }
+.ask-bar-icon-btn.is-active { background: rgba(47,191,223,0.2); color: var(--cyan); border-color: rgba(47,191,223,0.4); }
+.ask-bar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.06);
+  color: #cfe3f5;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.ask-bar-pill:hover { background: rgba(255,255,255,0.12); }
+.ask-bar-send {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--cyan), var(--purple));
+  color: #04202c;
+}
+.ask-bar-send:disabled { background: rgba(255,255,255,0.08); color: var(--text-dim); }
+.ask-bar-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 14px;
+  min-width: 220px;
+  background: rgba(14, 34, 53, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 6px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  z-index: 5;
+}
+.ask-bar-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  color: #e7f1fb;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  justify-content: flex-start;
+}
+.ask-bar-menu-item:hover { background: rgba(255,255,255,0.08); }
+.ask-bar-menu-item svg { color: #7fa2c2; flex-shrink: 0; }
 

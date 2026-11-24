@@ -23,6 +23,7 @@ const PATHS = {
   arrowRight: 'M5 12h14m0 0l-6-6m6 6l-6 6',
   sparkle: 'M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z',
   clock: 'M12 7v5l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  plus: 'M12 5v14M5 12h14',
 }
 
 export default function Icon({ name, size = 18, strokeWidth = 1.8, style, ...rest }) {
