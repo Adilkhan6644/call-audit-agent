@@ -89,7 +89,7 @@ export default function NewAudit() {
       {result?.status === 'completed' && result.result && (
         <div className="panel">
           <div className="label" style={{ marginBottom: 8 }}>RESULT</div>
-          <ScoreBadge score={result.result.score} />
+          <ScoreBadge score={result.result.score} variant="gauge" />
           <p>{result.result.summary}</p>
           <FindingsList findings={result.result.findings} />
         </div>

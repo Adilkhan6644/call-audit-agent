@@ -44,7 +44,7 @@ export default function AuditDetail() {
 
       {job.status === 'completed' && job.result && (
         <div className="panel">
-          <ScoreBadge score={job.result.score} />
+          <ScoreBadge score={job.result.score} variant="gauge" />
           <p>{job.result.summary}</p>
           <FindingsList findings={job.result.findings} />
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

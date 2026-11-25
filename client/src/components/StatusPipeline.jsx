@@ -1,3 +1,5 @@
+import Icon from './icons'
+
 /**
  * Visual-only split of the backend's single "processing" state into two
  * stages, based on the pipeline's known internal order (transcribe then
@@ -23,10 +25,31 @@ export default function StatusPipeline({ status, elapsedMs = 0 }) {
     return ''
   }
 
+  // The connector between stage i-1 and stage i reads as "done" once flow
+  // has passed through it, or carries the traveling spark while flow is
+  // actively crossing into stage i.
+  function connectorState(i) {
+    const prev = stageState(i - 1)
+    if (failed) return prev === 'failed' ? 'failed' : ''
+    if (prev === 'done') return 'done'
+    if (stageState(i) === 'active') return 'active'
+    return ''
+  }
+
   return (
     <div className="status-pipeline">
       {STAGES.map((label, i) => (
-        <div key={label} className={`stage ${stageState(i)}`}>{label}</div>
+        <div key={label} style={{ display: 'contents' }}>
+          {i > 0 && (
+            <div className={`pipeline-connector ${connectorState(i)}`}>
+              {connectorState(i) === 'active' && <span className="pipeline-connector-spark" />}
+            </div>
+          )}
+          <div className={`stage ${stageState(i)}`}>
+            {stageState(i) === 'done' && <Icon name="check" size={12} />}
+            {label}
+          </div>
+        </div>
       ))}
     </div>
   )
